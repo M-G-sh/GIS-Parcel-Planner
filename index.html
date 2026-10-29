@@ -1,0 +1,1431 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+</head>
+<body style="margin:0">
+<title>GIS Parcel Planner V5</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* Layout: drafting-table tool. Settings column on the right (RTL), live sheet on a dark desk to the left. */
+:root{
+  --bg:#e9ecea; --panel:#fbfcfb; --sunk:#f1f4f2; --ink:#1b2220; --muted:#5c6964; --line:#d3dad6;
+  --accent:#12715a; --accent-ink:#ffffff; --accent-soft:#dcefe8; --desk:#3a4340; --warn:#b3261e; --warn-soft:#fbe9e7; --ok:#1d7a4a; --ok-soft:#e1f2e8;
+  --f-ui:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121615; --panel:#1a201e; --sunk:#141917; --ink:#e4ebe8; --muted:#97a59f; --line:#2c3532;
+  --accent:#4cbf98; --accent-ink:#0b1512; --accent-soft:#183a30; --desk:#0c0f0e; --warn:#f08a7f; --warn-soft:#3a1e1b; --ok:#6fd39e; --ok-soft:#163626; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121615; --panel:#1a201e; --sunk:#141917; --ink:#e4ebe8; --muted:#97a59f; --line:#2c3532;
+  --accent:#4cbf98; --accent-ink:#0b1512; --accent-soft:#183a30; --desk:#0c0f0e; --warn:#f08a7f; --warn-soft:#3a1e1b; --ok:#6fd39e; --ok-soft:#163626; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+.app{display:grid;grid-template-columns:minmax(310px,390px) 1fr;height:100%;direction:rtl}
+.side{background:var(--panel);border-inline-end:1px solid var(--line);overflow-y:auto;padding-block:14px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.brand{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.brand h1{font-size:19px;margin:0;font-weight:700;text-wrap:balance}
+.brand span{color:var(--muted);font-size:12px}
+details{border-top:1px solid var(--line);padding-block:4px}
+summary{cursor:pointer;font-weight:600;padding-block:8px;list-style:none;display:flex;align-items:center;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";width:7px;height:7px;border-inline-start:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin-inline-end:2px}
+details[open] summary::before{transform:rotate(45deg)}
+summary small{color:var(--muted);font-weight:400;margin-inline-start:auto;font-size:12px}
+.sec{display:grid;gap:9px;padding-block:4px 12px}
+.row{display:grid;grid-template-columns:1fr 128px;gap:10px;align-items:center}
+.row.wide{grid-template-columns:1fr}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.en{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:11px;font-weight:700;font-family:var(--f-mono)}
+.vt tr.hl td{background:var(--accent-soft)}
+.vt select{padding:4px;font-size:12px;width:auto}
+.mapen{display:grid!important;place-items:center;border-radius:50%;background:#0f7f68;color:#fff;font:700 12px/1 "IBM Plex Mono",monospace;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+label{color:var(--ink);font-size:13px}
+.hint{color:var(--muted);font-size:12px;line-height:1.45}
+input[type=number],input[type=text],input[type=date],select,textarea{width:100%;font:inherit;font-size:13px;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+input[type=number]{font-family:var(--f-mono);direction:ltr;text-align:left;font-variant-numeric:tabular-nums}
+textarea{resize:vertical;min-height:56px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+.chk{display:flex;align-items:center;gap:8px}
+button{font:inherit;font-size:13px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 11px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.sm{padding:3px 8px;font-size:12px}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.vt-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:6px}
+table.vt{border-collapse:collapse;width:100%;font-size:12px}
+.vt th{background:var(--sunk);color:var(--muted);font-weight:500;padding:4px;text-align:right;white-space:nowrap}
+.vt td{padding:3px;border-top:1px solid var(--line);vertical-align:top}
+.vt input{padding:4px 5px;font-size:12px}
+.vt td.n{color:var(--muted);text-align:center;width:22px;padding-top:7px}
+.vt .meta{color:var(--muted);font-size:11px;white-space:nowrap;padding-top:2px}
+.vt input.num{width:92px}.vt input.sb{width:56px}.vt input.nm{width:96px}
+.qibla-read{display:flex;align-items:baseline;gap:6px;font-size:13px}
+.qibla-read b{font-family:var(--f-mono);font-size:18px;color:var(--accent)}
+/* main */
+.main{display:grid;grid-template-rows:auto auto 1fr;min-width:0;min-height:0}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--line);background:var(--panel)}
+.bar .grp{display:flex;gap:4px;align-items:center}
+.bar .sep{width:1px;height:22px;background:var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--panel);border-bottom:1px solid var(--line)}
+.chip{display:inline-flex;gap:6px;align-items:baseline;background:var(--sunk);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted)}
+.chip b{color:var(--ink);font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.chip.bad{background:var(--warn-soft);border-color:transparent;color:var(--warn)}.chip.bad b{color:var(--warn)}
+.chip.good{background:var(--ok-soft);border-color:transparent;color:var(--ok)}.chip.good b{color:var(--ok)}
+.warns{flex-basis:100%;display:grid;gap:4px}
+.warn{background:var(--warn-soft);color:var(--warn);border-radius:6px;padding:6px 10px;font-size:12.5px}
+.desk{background:var(--desk);overflow:auto;min-height:0;padding:18px;position:relative}
+.desk canvas{display:block;margin-inline:auto;box-shadow:0 2px 14px rgba(0,0,0,.35);touch-action:none;cursor:grab;max-width:none}
+.desk canvas.dragging{cursor:grabbing}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:13px;z-index:20;max-width:90vw}
+.drop{border:1.5px dashed var(--line);border-radius:8px;padding:10px;text-align:center;color:var(--muted);font-size:12.5px;cursor:pointer}
+.drop.on{border-color:var(--accent);color:var(--accent)}
+.tabs{display:flex;gap:2px;background:var(--sunk);border:1px solid var(--line);border-radius:7px;padding:2px}
+.tabs button{border:0;background:transparent;padding:4px 12px}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.mapwrap{position:relative;min-height:0;background:var(--desk)}
+#map{position:absolute;inset:0;direction:ltr;background:#1d2422}
+.maptools{position:absolute;top:10px;inset-inline:10px;z-index:500;display:flex;flex-wrap:wrap;gap:6px;align-items:center;pointer-events:none;direction:rtl}
+.maptools>*{pointer-events:auto}
+.maptools .box{display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.maptools input[type=text]{width:230px;max-width:60vw}
+.mapinfo{font-size:12.5px;color:var(--muted);padding-inline:4px}
+.mapinfo b{color:var(--ink);font-family:var(--f-mono)}
+.mapmsg{position:absolute;bottom:16px;inset-inline:16px;z-index:500;background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:13px}
+.vx{background:#fff;border:2px solid #00a884;border-radius:50%;box-sizing:border-box}
+button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+@media (max-width:900px){
+  .mapwrap{height:70vh}
+  .app{grid-template-columns:1fr;height:auto}
+  .main{order:-1;grid-template-rows:auto auto auto}
+  .desk{height:70vh}
+  .side{border-inline-end:0;border-top:1px solid var(--line);overflow:visible}
+  html,body{height:auto}
+}
+@media (prefers-reduced-motion:reduce){summary::before{transition:none}}
+/* buildable-area PNG preview */
+.bmodal{position:fixed;inset:0;z-index:1500;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px}
+.bmodal[hidden]{display:none}
+.bcard{background:var(--panel);color:var(--ink);border-radius:10px;width:min(920px,100%);max-height:100%;display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;gap:10px;padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.bhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bimg{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:6px;min-height:0}
+.bimg img{display:block;max-width:100%;max-height:calc(100vh - 210px);width:auto;height:auto;margin:auto}
+.toast{z-index:1600}
+</style>
+
+<div class="app" id="app">
+  <aside class="side" id="side">
+    <div class="brand"><h1>GIS Parcel Planner V5</h1><span>أي أرض · أي موقع</span></div>
+    <div class="sec" style="padding-bottom:10px">
+      <div class="row"><label for="projType">نوع اللوحة</label><select id="projType" data-k="projType"><option value="mosque">مسجد (توزيع كامل)</option><option value="land">أرض فقط (كروكي موقع)</option></select></div>
+    </div>
+
+    <details open>
+      <summary>١ — استيراد الأرض</summary>
+      <div class="sec">
+        <div class="drop" id="parcelDrop" tabindex="0" role="button"><b>اسحب ملف الأرض هنا أو اضغط للاختيار</b><br>ZIP Shapefile (SHP + SHX + DBF + PRJ) · GeoJSON · KML / KMZ</div>
+        <input type="file" id="parcelFile" accept=".zip,.geojson,.json,.kml,.kmz" hidden>
+        <div class="btns"><button id="pickMap">رسم قطعة على الخريطة</button><button id="pickImg">رفع صورة جوية</button><button id="demoBtn">قطعة تجريبية</button></div>
+        <div class="row" id="parcelPick" hidden><label for="parcelSel">القطعة المختارة</label><select id="parcelSel"></select></div>
+        <div class="hint" id="importInfo"></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>٢ — الإحداثيات (يدوي)</summary>
+      <div class="sec">
+        <div class="row"><label for="coordMode">نظام الإحداثيات</label>
+          <select id="coordMode" data-k="coordMode" data-struct="1"><option value="local">محلي (متر) من نقطة مرجعية</option><option value="utm">UTM (شرقيات/شماليات)</option></select></div>
+        <div id="localRef" class="row2">
+          <div><label for="refLat">خط العرض للنقطة المرجعية</label><input id="refLat" type="number" step="any" data-k="refLat"></div>
+          <div><label for="refLon">خط الطول</label><input id="refLon" type="number" step="any" data-k="refLon"></div>
+        </div>
+        <div id="utmRef" class="row" hidden><label for="zone">نطاق UTM (شمال)</label><input id="zone" type="number" min="1" max="60" step="1" data-k="zone"></div>
+        <div class="hint" id="refInfo"></div>
+        <div class="vt-wrap"><table class="vt"><thead><tr><th>#</th><th id="thx">X (شرق)</th><th id="thy">Y (شمال)</th><th></th></tr></thead><tbody id="vbody"></tbody></table></div>
+        <div class="btns"><button class="sm" id="addV">إضافة نقطة</button><button class="sm" id="showPaste">لصق إحداثيات</button></div>
+        <div id="pasteBox" class="sec" hidden>
+          <textarea id="pasteTxt" placeholder="سطر لكل نقطة: X  Y  (أو رقم النقطة  X  Y) — من إكسل أو جدول الصك"></textarea>
+          <div class="btns"><button class="sm pri" id="doPaste">استبدال النقاط</button></div>
+        </div>
+        <div class="sec" style="border-top:1px dashed var(--line);padding-top:10px">
+          <b style="font-size:13px">توليد أرض مستطيلة</b>
+          <div class="row2">
+            <div><label for="gL">الطول م</label><input id="gL" type="number" step="any" value="350"></div>
+            <div><label for="gW">العرض م</label><input id="gW" type="number" step="any" value="200"></div>
+          </div>
+          <div class="row"><label for="gB">زاوية الضلع الأول من الشمال°</label><input id="gB" type="number" step="any" value="35"></div>
+          <div class="btns"><button class="sm" id="genRect">توليد</button></div>
+        </div>
+      </div>
+    </details>
+
+    <details open id="sbSec">
+      <summary>٣ — الارتدادات لكل ضلع</summary>
+      <div class="sec">
+        <div class="hint">الأضلاع مرقّمة بدوائر على اللوحة والخريطة (الضلع ١ من النقطة ١ إلى ٢). اختر وظيفة الضلع فيأخذ الارتداد الافتراضي، ثم عدّله إن لزم.</div>
+        <div class="row3">
+          <div><label for="dFront">أمامي م</label><input id="dFront" type="number" step="0.5" min="0" data-k="sbDef.front"></div>
+          <div><label for="dSide">جانبي م</label><input id="dSide" type="number" step="0.5" min="0" data-k="sbDef.side"></div>
+          <div><label for="dRear">خلفي م</label><input id="dRear" type="number" step="0.5" min="0" data-k="sbDef.rear"></div>
+        </div>
+        <div class="vt-wrap"><table class="vt"><thead><tr><th>ضلع</th><th>الوظيفة</th><th>ارتداد م</th><th>اسم الشارع / الجار</th></tr></thead><tbody id="sbody"></tbody></table></div>
+        <div class="btns"><button class="sm" id="applyRoles">تطبيق الافتراضي على كل الأضلاع</button><button class="sm" id="sbZero">تصفير الارتدادات</button></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>ألوان حدود الأرض</summary>
+      <div class="sec"><div class="hint">اختر لونًا عامًا للحدود أو لونًا مختلفًا لكل ضلع. تظهر الألوان في اللوحة وملفات PNG وPDF.</div>
+        <div class="row"><label for="outlineColor">لون الحدود الافتراضي</label><input type="color" id="outlineColor" value="#006c73"></div>
+        <div id="edgeColorsPanel"></div>
+        <button id="resetEdgeColors" class="sm">استرجاع الألوان الأصلية</button>
+      </div>
+    </details>
+    <details open class="mq">
+      <summary>القبلة <small id="qSum"></small></summary>
+      <div class="sec">
+        <div class="qibla-read">زاوية القبلة من الشمال الحقيقي: <b id="qVal"></b></div>
+        <label class="chk"><input type="checkbox" id="qAuto" data-k="qAuto"> حساب تلقائي من إحداثيات الموقع</label>
+        <div class="row"><label for="qManual">زاوية يدوية°</label><input id="qManual" type="number" step="0.1" data-k="qManual"></div>
+      </div>
+    </details>
+
+    <details open class="mq">
+      <summary>البرنامج</summary>
+      <div class="sec">
+        <div class="row"><label for="cap">الطاقة الاستيعابية (مصلٍ)</label><input id="cap" type="number" step="50" min="0" data-k="cap"></div>
+        <input type="range" id="capR" min="200" max="20000" step="50" aria-label="الطاقة الاستيعابية">
+        <div class="row"><label for="womenPct">نسبة النساء ٪</label><input id="womenPct" type="number" step="1" min="0" max="60" data-k="womenPct"></div>
+        <div class="row"><label for="aPer">مساحة المصلي م²</label><input id="aPer" type="number" step="0.05" min="0.5" data-k="aPer"></div>
+        <div class="row"><label for="hallRatio">نسبة عرض المصلى إلى عمقه</label><input id="hallRatio" type="number" step="0.1" min="0.6" max="4" data-k="hallRatio"></div>
+        <div class="row"><label for="sahnRatio">عمق الصحن ÷ عمق المصلى</label><input id="sahnRatio" type="number" step="0.05" min="0" max="2" data-k="sahnRatio"></div>
+        <div class="row"><label for="ablPer">المواضئ م² لكل مصلٍ</label><input id="ablPer" type="number" step="0.01" min="0" data-k="ablPer"></div>
+        <div class="row2">
+          <label class="chk"><input type="checkbox" id="minaret" data-k="minaret"> مئذنة</label>
+          <select id="minSide" data-k="minSide" aria-label="جهة المئذنة"><option value="right">يمين المحراب</option><option value="left">يسار المحراب</option></select>
+        </div>
+        <div class="row"><label for="minSize">ضلع المئذنة م</label><input id="minSize" type="number" step="0.5" min="2" data-k="minSize"></div>
+        <label class="chk"><input type="checkbox" id="housing" data-k="housing"> سكن الإمام والمؤذن</label>
+        <div class="row"><label for="housingArea">مسطح السكن م²</label><input id="housingArea" type="number" step="10" min="0" data-k="housingArea"></div>
+        <div class="btns"><button class="sm" id="autoBtn">توزيع تلقائي</button></div>
+        <div class="hint">اسحب كتلة المسجد أو السكن على اللوحة لتحريكها. تدور الكتل دائماً باتجاه القبلة.</div>
+      </div>
+    </details>
+
+    <details class="mq">
+      <summary>المواقف</summary>
+      <div class="sec">
+        <div class="row"><label for="parkRatio">مصلٍ لكل موقف</label><input id="parkRatio" type="number" step="1" min="1" data-k="parkRatio"></div>
+        <div class="row2">
+          <div><label for="stallW">عرض الموقف م</label><input id="stallW" type="number" step="0.1" data-k="stallW"></div>
+          <div><label for="stallL">طول الموقف م</label><input id="stallL" type="number" step="0.1" data-k="stallL"></div>
+        </div>
+        <div class="row2">
+          <div><label for="aisle">عرض الممر م</label><input id="aisle" type="number" step="0.5" data-k="aisle"></div>
+          <div><label for="buf">إبعاد عن المباني م</label><input id="buf" type="number" step="0.5" data-k="buf"></div>
+        </div>
+        <div class="row"><label for="parkEdge">محاذاة صفوف المواقف مع</label><select id="parkEdge" data-k="parkEdge"></select></div>
+        <label class="chk"><input type="checkbox" id="parkLimit" data-k="parkLimit"> الاكتفاء بالعدد المطلوب (الأقرب للمسجد)</label>
+      </div>
+    </details>
+
+    <details>
+      <summary>الصورة الجوية</summary>
+      <div class="sec">
+        <div class="row"><label for="imgSrc">مصدر الصورة</label><select id="imgSrc" data-k="img.src"><option value="esri">فضائية تلقائية (Esri)</option><option value="upload">صورة أرفعها</option><option value="none">بدون</option></select></div>
+        <div class="row"><label for="maxZ">أقصى تفصيل للصورة الفضائية</label><select id="maxZ" data-k="img.maxZ"><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option></select></div>
+        <div class="hint">الصورة الفضائية تُسحب تلقائياً لمكان الأرض، تحت اللوحة وفي ملف الأوتوكاد. تعمل عند فتح البرنامج كملف على جهازك.</div>
+        <div class="drop" id="drop" tabindex="0" role="button">اسحب صورة هنا أو اضغط لاختيارها (لقطة من Google Earth أو صورة مساحية)</div>
+        <input type="file" id="imgFile" accept="image/*" hidden>
+        <div class="hint">في Google Earth قِس عرض الصورة كاملاً بالمسطرة واكتبه هنا، ثم اضبط الإزاحة والدوران حتى تنطبق حدود الأرض. فعّل «سحب الصورة» لتحريكها باليد.</div>
+        <label class="chk"><input type="checkbox" id="imgShow" data-k="img.show"> إظهار تحت المخطط</label>
+        <label class="chk"><input type="checkbox" id="imgDrag" data-k="img.drag"> سحب الصورة بالماوس</label>
+        <div class="row"><label for="imgW">عرض الصورة على الطبيعة م</label><input id="imgW" type="number" step="1" data-k="img.widthM"></div>
+        <div class="row"><label for="imgRot">دوران°</label><input id="imgRot" type="number" step="0.1" data-k="img.rot"></div>
+        <div class="row2">
+          <div><label for="imgX">إزاحة شرق م</label><input id="imgX" type="number" step="0.5" data-k="img.cx"></div>
+          <div><label for="imgY">إزاحة شمال م</label><input id="imgY" type="number" step="0.5" data-k="img.cy"></div>
+        </div>
+        <div class="row"><label for="imgOp">الشفافية</label><input id="imgOp" type="range" min="0.15" max="1" step="0.05" data-k="img.opacity"></div>
+        <div class="btns"><button class="sm" id="imgClear">إزالة الصورة</button></div>
+      </div>
+    </details>
+
+    <details>
+      <summary>اللوحة</summary>
+      <div class="sec">
+        <div class="row2">
+          <div><label for="paper">المقاس</label><select id="paper" data-k="sheet.paper"><option>A0</option><option>A1</option><option>A2</option><option>A3</option><option>A4</option></select></div>
+          <div><label for="orient">الاتجاه</label><select id="orient" data-k="sheet.orient"><option value="landscape">أفقي</option><option value="portrait">رأسي</option></select></div>
+        </div>
+        <div class="row"><label for="scale">مقياس الرسم</label><select id="scale" data-k="sheet.scale"></select></div>
+        <div class="row"><label for="vr">دوران الرسم°</label><input id="vr" type="number" step="1" data-k="sheet.vr"></div>
+        <div class="btns"><button class="sm" id="alignBtn">محاذاة أطول ضلع أفقياً</button><button class="sm" id="northBtn">الشمال لأعلى</button><button class="sm" id="centerBtn">توسيط الرسم</button></div>
+        <div class="row"><label for="digits">أرقام اللوحة</label><select id="digits" data-k="sheet.digits"><option value="arab">٠١٢٣ هندية</option><option value="latn">0123 عربية</option></select></div>
+        <div class="row2">
+          <label class="chk"><input type="checkbox" data-k="sheet.legend" id="sLeg"> مفتاح الرسم</label>
+          <label class="chk"><input type="checkbox" data-k="sheet.table" id="sTab"> جدول المساحات</label>
+          <label class="chk"><input type="checkbox" data-k="sheet.dims" id="sDim"> أطوال الأضلاع</label>
+          <label class="chk"><input type="checkbox" data-k="sheet.notes" id="sNot"> الملاحظات</label>
+          <label class="chk"><input type="checkbox" data-k="sheet.coords" id="sCo"> جدول الإحداثيات</label>
+        </div>
+        <div class="row wide"><label for="planTitle">عنوان الرسم</label><input id="planTitle" type="text" data-k="sheet.planTitle"></div>
+        <b style="font-size:13px;margin-top:6px">جدول البيانات</b>
+        <div class="row2">
+          <div><label for="tOff">اسم المكتب</label><input id="tOff" type="text" data-k="tb.office"></div>
+          <div><label for="tOffS">وصف المكتب</label><input id="tOffS" type="text" data-k="tb.officeSub"></div>
+        </div>
+        <div class="row wide"><label for="tProj">المشروع</label><input id="tProj" type="text" data-k="tb.project"></div>
+        <div class="row wide"><label for="tTitle">عنوان اللوحة</label><input id="tTitle" type="text" data-k="tb.title"></div>
+        <div class="row2">
+          <div><label for="tCli">المالك</label><input id="tCli" type="text" data-k="tb.client"></div>
+          <div><label for="tLoc">الموقع</label><input id="tLoc" type="text" data-k="tb.location"></div>
+          <div><label for="tNo">رقم اللوحة</label><input id="tNo" type="text" data-k="tb.no"></div>
+          <div><label for="tRev">الإصدار</label><input id="tRev" type="text" data-k="tb.rev"></div>
+          <div><label for="tDate">التاريخ</label><input id="tDate" type="text" data-k="tb.date"></div>
+          <div><label for="tDr">الرسام</label><input id="tDr" type="text" data-k="tb.drawn"></div>
+          <div><label for="tCh">المدقق</label><input id="tCh" type="text" data-k="tb.checked"></div>
+        </div>
+        <div class="row wide"><label for="tNotes">الملاحظات</label><textarea id="tNotes" data-k="tb.notes"></textarea></div>
+      </div>
+    </details>
+
+    <details open id="txSec">
+      <summary>نموذج المعاملة <small>شكل ثابت · الأرقام تلقائية</small></summary>
+      <div class="sec">
+        <div class="hint">المساحات وأطوال الأضلاع واتجاه القبلة والارتدادات تُحسب من الأرض: الارتداد الأمامي/الخلفي/الجانبي من وظيفة كل ضلع، واسم الضلع الأمامي يُكتب على الشارع. دوران الأرض في النموذج من «دوران الرسم» في قسم اللوحة.</div>
+        <div class="row wide"><label for="txLoc">موقع الأرض (المدينة › المخطط › الشارع)</label><input id="txLoc" type="text" data-k="tx.loc"></div>
+        <div class="row2">
+          <div><label for="txType">نوع المبنى المسموح</label><input id="txType" type="text" data-k="tx.bType"></div>
+          <div><label for="txFloors">أقصى عدد أدوار</label><input id="txFloors" type="text" data-k="tx.floors" placeholder="-"></div>
+          <div><label for="txHeight">أقصى ارتفاع م</label><input id="txHeight" type="text" data-k="tx.height" placeholder="-"></div>
+          <div><label for="txRatio">نسبة البناء ٪</label><input id="txRatio" type="number" step="1" min="0" max="100" data-k="tx.ratio"></div>
+          <div><label for="txFar">معامل البناء FAR</label><input id="txFar" type="text" data-k="tx.far" placeholder="-"></div>
+          <div><label for="txPark">المواقف ٪ من الأرض</label><input id="txPark" type="number" step="1" min="0" max="100" data-k="tx.parkPct"></div>
+        </div>
+        <div class="row wide"><label for="txParkTxt">اشتراطات مواقف السيارات</label><input id="txParkTxt" type="text" data-k="tx.parkTxt"></div>
+        <div class="row wide"><label for="txUses">الاستخدامات المسموح بها</label><input id="txUses" type="text" data-k="tx.uses"></div>
+        <div class="row wide"><label for="txNot">الاستخدامات غير المسموح بها</label><input id="txNot" type="text" data-k="tx.notUses"></div>
+        <div class="row wide"><label for="txSpecial">الاشتراطات الخاصة</label><input id="txSpecial" type="text" data-k="tx.special"></div>
+        <div class="row2">
+          <div><label for="txArchLbl">عنوان بند العمارة</label><input id="txArchLbl" type="text" data-k="tx.archLbl"></div>
+          <div><label for="txArch">اشتراطات العمارة</label><input id="txArch" type="text" data-k="tx.arch"></div>
+        </div>
+        <div class="row wide"><label for="txAdv">الميزة التخطيطية</label><textarea id="txAdv" data-k="tx.adv"></textarea></div>
+        <div class="row2">
+          <label class="chk"><input type="checkbox" id="txQibla" data-k="tx.qibla"> اتجاه القبلة</label>
+          <label class="chk"><input type="checkbox" id="txNorth" data-k="tx.north"> سهم الشمال</label>
+        </div>
+        <b style="font-size:13px;margin-top:6px">التوثيق الفوتوغرافي</b>
+        <div class="drop" id="txDrop" tabindex="0" role="button">اسحب صورة الموقع هنا أو اضغط لاختيارها</div>
+        <input type="file" id="txFile" accept="image/*" hidden>
+        <div class="hint" id="txPhotoInfo">لا توجد صورة بعد.</div>
+        <div class="hint">الصورة تملأ عرض الإطار، وإن كانت أطول منه تُقص من أعلاها فقط، فيبقى الشريط السفلي والـ QR كما هما.</div>
+        <label class="chk"><input type="checkbox" id="txStrip" data-k="tx.qrStrip"> إضافة شريط QR وخريطة أسفل الصورة (لصورة بدون QR)</label>
+        <div id="txStripBox" class="sec" hidden>
+          <div class="row wide"><label for="txCap">نص الشريط (سطر لكل معلومة)</label><textarea id="txCap" data-k="tx.cap"></textarea></div>
+          <div class="row wide"><label for="txQr">رابط الـ QR</label><input id="txQr" type="text" dir="ltr" data-k="tx.qr" placeholder="تلقائي: Google Maps من إحداثيات الأرض"></div>
+        </div>
+        <div class="btns"><button class="pri" id="xTx">معاينة وتصدير النموذج</button><button class="sm" id="txPhotoClear">إزالة الصورة</button></div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>التصدير</summary>
+      <div class="sec">
+        <div class="row"><label for="dpi">دقة PDF/PNG</label><select id="dpi" data-k="exp.dpi"><option value="150">150 dpi</option><option value="200">200 dpi</option><option value="300">300 dpi</option></select></div>
+        <div class="row"><label for="eCoords">إحداثيات DXF</label><select id="eCoords" data-k="exp.coords"><option value="utm">UTM حقيقية</option><option value="local">محلية</option></select></div>
+        <div class="row"><label for="dxfLang">نصوص DXF</label><select id="dxfLang" data-k="exp.dxfLang"><option value="ar">عربي</option><option value="en">English</option></select></div>
+        <div class="btns">
+          <button class="pri" id="xPdf">لوحة PDF</button>
+          <button id="xPng">صورة PNG</button>
+          <button id="xDxf">DXF للأوتوكاد</button>
+          <button id="xShp">Shapefile + KML</button>
+        </div>
+        <div class="sec" style="border-top:1px dashed var(--line);padding-top:10px;margin-top:4px">
+          <b style="font-size:13px">مخطط المساحة القابلة للبناء بعد الارتدادات</b>
+          <div class="row wide"><label for="bTitle">عنوان المخطط (اسم المحور / الشارع)</label><input id="bTitle" type="text" data-k="bld.title" placeholder="تلقائي من أسماء الأضلاع الأمامية"></div>
+          <div class="row"><label for="bRatio">أقصى نسبة بناء نظامية ٪</label><input id="bRatio" type="text" inputmode="decimal" dir="ltr" data-k="bld.maxRatio" placeholder="غير محددة"></div>
+          <div class="hint">تُحسب المساحة من مضلع الأرض الفعلي بعد خصم ارتداد كل ضلع. إن تُركت النسبة النظامية فارغة تُعرض النسبة الهندسية الناتجة عن الارتدادات وتُوصف بذلك.</div>
+          <div class="btns"><button id="xBld">تصدير مخطط المساحة بعد الارتدادات PNG</button></div>
+        </div>
+        <div class="hint">DXF والـ Shapefile يُحفظان داخل ملف ZIP. ملف KML يفتح في Google Earth فوق الصورة الفضائية مباشرة. إحداثيات UTM على مرجع WGS 84.</div>
+        <div class="btns" style="margin-top:6px"><button class="sm" id="xJson">حفظ المشروع</button><button class="sm" id="openJson">فتح مشروع</button><button class="sm" id="resetBtn">مثال جديد</button></div>
+        <input type="file" id="jsonFile" accept=".json,application/json" hidden>
+        <div class="hint" id="dlNote" hidden>حفظ الملفات غير متاح في هذا العرض. افتح الصفحة من claude.ai للتنزيل.</div>
+      </div>
+    </details>
+  </aside>
+
+  <main class="main">
+    <div class="bar">
+      <div class="tabs" role="group" aria-label="العرض"><button class="sm" id="tabMap" aria-pressed="false">الخريطة</button><button class="sm" id="tabSheet" aria-pressed="true">اللوحة</button></div>
+      <span class="sep"></span>
+      <div class="grp sheetonly"><button class="sm" id="zOut" aria-label="تصغير">−</button><button class="sm" id="zFit">ملاءمة</button><button class="sm" id="zIn" aria-label="تكبير">+</button></div>
+      <span class="sep"></span>
+      <span class="hint sheetonly" id="modeHint">اسحب المسجد أو السكن لتحريكه، واسحب الفراغ لتحريك الرسم داخل اللوحة.</span>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="desk" id="desk"><canvas id="cv" aria-label="معاينة اللوحة"></canvas></div>
+    <div class="mapwrap" id="mapwrap" hidden>
+      <div id="map"></div>
+      <div class="maptools">
+        <div class="box"><input type="text" id="mSearch" placeholder="اسم مكان، أو إحداثيات 24.71, 46.85، أو رابط Google Maps" aria-label="بحث"><button class="sm" id="mGo">بحث</button></div>
+        <div class="box"><button class="sm" id="mDraw">رسم الأرض</button><button class="sm" id="mUndo">تراجع</button><button class="sm" id="mClear">مسح</button><button class="sm pri" id="mUse">اعتماد الأرض</button><span class="mapinfo" id="mInfo"></span></div>
+      </div>
+      <div class="mapmsg" id="mapMsg" hidden></div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div class="bmodal" id="bldModal" hidden role="dialog" aria-modal="true" aria-labelledby="bldHead">
+  <div class="bcard">
+    <div class="bhead"><b id="bldHead">معاينة مخطط المساحة بعد الارتدادات</b><button class="sm" id="bldClose" aria-label="إغلاق">×</button></div>
+    <div class="bimg"><img id="bldImg" alt="مخطط المساحة القابلة للبناء بعد الارتدادات"></div>
+    <div class="hint" id="bldInfo"></div>
+    <div class="btns"><button class="pri" id="bldSave">تنزيل PNG</button><button id="bldPdf" hidden>تنزيل PDF</button><button id="bldCancel">إغلاق</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const D2R=Math.PI/180, R2D=180/Math.PI;
+const KAABA={lat:21.422487,lon:39.826206};
+const PAPERS={A0:[1189,841],A1:[841,594],A2:[594,420],A3:[420,297],A4:[297,210]};
+const SCALES=[100,200,250,300,400,500,600,750,1000,1250,1500,2000,2500,3000,4000,5000,7500,10000];
+const FONT='"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif';
+const STORE='mosque-site-planner-v1', STORE_IMG='mosque-site-planner-img-v1';
+const FACES=['الشمال','الشمال الشرقي','الشرق','الجنوب الشرقي','الجنوب','الجنوب الغربي','الغرب','الشمال الغربي'];
+const INK='#1a1a1a', MUTED='#5d5d5d', RULE='#1a1a1a';
+const COL={hall:{f:'#fbfaf5',s:'#2b2b2b'},mihrab:{f:'#fbfaf5',s:'#2b2b2b'},women:{f:'#cdb9e6',s:'#6a4f93'},sahn:{f:'#ecd9b0',s:'#9a7a3f'},
+  ablM:{f:'#8b97a4',s:'#4b5560'},ablW:{f:'#8b97a4',s:'#4b5560'},minaret:{f:'#d9a441',s:'#8a6216'},house:{f:'#a6d8c8',s:'#2f7a64'},
+  park:{f:'#e1e7f0',s:'#7d8ea8'},land:{f:'#d7e9c8'},qibla:'#b07f22',sb:'#c62f26'};
+const LBL={hall:['مصلى الرجال','MEN PRAYER HALL'],mihrab:['المحراب','MIHRAB'],women:['مصلى النساء','WOMEN PRAYER HALL'],sahn:['الصحن','SAHN (COURTYARD)'],
+  ablM:['مواضئ الرجال','MEN ABLUTION'],ablW:['مواضئ النساء','WOMEN ABLUTION'],minaret:['المئذنة','MINARET'],house:['سكن الإمام والمؤذن','IMAM & MUEZZIN HOUSING'],park:['موقف','PARKING']};
+const LAYER={hall:'HALL',mihrab:'HALL',women:'WOMEN',sahn:'SAHN',ablM:'ABLUTION',ablW:'ABLUTION',minaret:'MINARET',house:'HOUSING',park:'PARKING'};
+
+/* ---------- state ---------- */
+function rectVerts(L,Wd,bear){const d={x:Math.sin(bear*D2R),y:Math.cos(bear*D2R)},n={x:-d.y,y:d.x};
+  const pts=[{x:0,y:0},{x:d.x*L,y:d.y*L},{x:d.x*L+n.x*Wd,y:d.y*L+n.y*Wd},{x:n.x*Wd,y:n.y*Wd}];
+  const cx=(d.x*L+n.x*Wd)/2,cy=(d.y*L+n.y*Wd)/2;return pts.map(p=>({x:+(p.x-cx).toFixed(3),y:+(p.y-cy).toFixed(3)}))}
+function today(){const d=new Date();return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')}
+function defaults(){
+  const sb=[20,12,20.5,10],roles=['front','side','rear','side'];
+  return {outlineColor:'#006c73',edgeColors:[],projType:'mosque',coordMode:'local',zone:38,refLat:24.7135,refLon:46.8520,
+    verts:rectVerts(350,200,35).map((p,i)=>({x:p.x,y:p.y,sb:sb[i],role:roles[i],name:i===0?'الطريق الدائري':''})),sbDef:{front:6,side:3,rear:3},
+    qAuto:true,qManual:244,cap:6500,womenPct:15,aPer:1.2,hallRatio:1.6,sahnRatio:0.45,ablPer:0.05,minaret:true,minSide:'right',minSize:5,
+    housing:true,housingArea:320,parkRatio:12,stallW:2.5,stallL:5.5,aisle:6,buf:6,parkLimit:false,parkEdge:-1,mosque:null,house:null,
+    img:{src:'esri',maxZ:19,show:true,drag:false,opacity:0.9,widthM:600,rot:0,cx:0,cy:0},
+    sheet:{paper:'A1',orient:'landscape',scale:'auto',vr:-55,panX:0,panY:0,legend:true,table:true,dims:true,notes:true,coords:true,digits:'arab',planTitle:'المخطط العام للموقع'},
+    tb:{office:'Drconsultancy',officeSub:'استشارات هندسية',project:'مسجد جامع (مثال)',client:'',location:'',title:'المخطط العام — توزيع الموقع',no:'A-01',rev:'0',date:today(),drawn:'',checked:'',
+      notes:'الأبعاد بالمتر.\nاتجاه القبلة محسوب من إحداثيات الموقع على الشمال الحقيقي.\nالمخطط مبدئي للدراسة ويخضع لاشتراطات الجهات المختصة.'},
+    exp:{dpi:200,coords:'utm',dxfLang:'ar'},bld:{title:'',maxRatio:''},
+    tx:{loc:'مكة المكرمة › مخطط العسيلة › الطريق الدائري الرابع',bType:'خدمات دينية',floors:'-',height:'18',ratio:60,far:'',parkPct:20,
+      parkTxt:'20% من مساحة الموقع (مواقف سطحية وحافلات)',uses:'ديني - اجتماعي - ثقافي - تجاري - سكن المؤذن والامام',notUses:'جميع الاستخدامات الأخرى',
+      special:'يسمح بالاستخدامات التجارية بحد أقصى 8 أدوار.',archLbl:'اشتراطات عمارة مكة',arch:'مصدر العمارة التقليدية',
+      adv:'يتميز الموقع بوجوده داخل حد الحرم الشرعي ويخدم القادمين من طريق الملك فيصل بن عبدالعزيز (السيل) وطريق مكة - المدينة المنورة.',
+      cap:'الطريق الدائري الرابع\nحي وادي جليل\nأمانة العاصمة المقدسة',qr:'',qrStrip:false,qibla:true,north:true}};
+}
+function merge(d,s){if(!s||typeof s!=='object')return d;for(const k in d){if(s[k]===undefined)continue;
+  if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k]))d[k]=merge(d[k],s[k]);else d[k]=s[k]}return d}
+let S=defaults(),HAD=false;
+try{const raw=localStorage.getItem(STORE);if(raw){S=merge(defaults(),JSON.parse(raw));HAD=true}}catch(e){}
+let IMG=null,IMGDATA=null,M=null,PT=null,LAY=null,c=null,K=1,zoom=1;
+function persist(){try{localStorage.setItem(STORE,JSON.stringify(S))}catch(e){}}
+function getP(o,p){return p.split('.').reduce((a,k)=>a==null?a:a[k],o)}
+function setP(o,p,v){const ks=p.split('.');let a=o;for(let i=0;i<ks.length-1;i++)a=a[ks[i]];a[ks.at(-1)]=v}
+
+/* ---------- geometry ---------- */
+const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y}),add=(a,b)=>({x:a.x+b.x,y:a.y+b.y}),mul=(a,s)=>({x:a.x*s,y:a.y*s});
+const dot=(a,b)=>a.x*b.x+a.y*b.y,cross=(a,b)=>a.x*b.y-a.y*b.x;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function polyArea(P){let s=0;for(let i=0;i<P.length;i++){const j=(i+1)%P.length;s+=P[i].x*P[j].y-P[j].x*P[i].y}return s/2}
+function centroid(P){const A=polyArea(P);if(Math.abs(A)<1e-9){let x=0,y=0;P.forEach(p=>{x+=p.x;y+=p.y});return{x:x/P.length,y:y/P.length}}
+  let cx=0,cy=0;for(let i=0;i<P.length;i++){const j=(i+1)%P.length,f=P[i].x*P[j].y-P[j].x*P[i].y;cx+=(P[i].x+P[j].x)*f;cy+=(P[i].y+P[j].y)*f}return{x:cx/(6*A),y:cy/(6*A)}}
+function inPoly(p,P){let ins=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],b=P[j];
+  if(((a.y>p.y)!==(b.y>p.y))&&(p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x))ins=!ins}return ins}
+const polyIn=(A,B)=>A.every(p=>inPoly(p,B));
+function isConvex(P){let sg=0;for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],c2=P[(i+2)%P.length];
+  const z=cross(sub(b,a),sub(c2,b));if(Math.abs(z)<1e-6)continue;const s=Math.sign(z);if(sg===0)sg=s;else if(s!==sg)return false}return true}
+function proj(P,ax){let mn=Infinity,mx=-Infinity;for(const p of P){const v=dot(p,ax);if(v<mn)mn=v;if(v>mx)mx=v}return[mn,mx]}
+function overlap(A,B){for(const P of [A,B])for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],ax={x:-(b.y-a.y),y:b.x-a.x};
+  const[a0,a1]=proj(A,ax),[b0,b1]=proj(B,ax);if(a1<=b0+1e-9||b1<=a0+1e-9)return false}return true}
+function offsetPoly(P,sbs,sign){const n=P.length,lines=[];
+  for(let i=0;i<n;i++){const a=P[i],b=P[(i+1)%n],d=sub(b,a),l=Math.hypot(d.x,d.y)||1,u={x:d.x/l,y:d.y/l},nin=mul({x:-u.y,y:u.x},sign);
+    lines.push({p:add(a,mul(nin,sbs[i])),d:u})}
+  const out=[];for(let i=0;i<n;i++){const A=lines[(i-1+n)%n],B=lines[i],cr=cross(A.d,B.d);
+    if(Math.abs(cr)<1e-9){out.push(B.p);continue}const t=cross(sub(B.p,A.p),B.d)/cr;out.push(add(A.p,mul(A.d,t)))}return out}
+function bbox(P){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const p of P){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y)}return{x0,y0,x1,y1}}
+
+/* ---------- geodesy (WGS84 / UTM) ---------- */
+const GA=6378137,GF=1/298.257223563,E2=GF*(2-GF),EP2=E2/(1-E2),K0=0.9996;
+const cmer=z=>(z-1)*6-180+3, autoZone=lon=>clamp(Math.floor((lon+180)/6)+1,1,60);
+function ll2utm(lat,lon,z){const p=lat*D2R,l=lon*D2R,l0=cmer(z)*D2R,s=Math.sin(p),c0=Math.cos(p),t=Math.tan(p);
+  const N=GA/Math.sqrt(1-E2*s*s),T=t*t,C=EP2*c0*c0,A=c0*(l-l0),e4=E2*E2,e6=e4*E2;
+  const Mm=GA*((1-E2/4-3*e4/64-5*e6/256)*p-(3*E2/8+3*e4/32+45*e6/1024)*Math.sin(2*p)+(15*e4/256+45*e6/1024)*Math.sin(4*p)-(35*e6/3072)*Math.sin(6*p));
+  const x=K0*N*(A+(1-T+C)*A**3/6+(5-18*T+T*T+72*C-58*EP2)*A**5/120)+500000;
+  const y=K0*(Mm+N*t*(A*A/2+(5-T+9*C+4*C*C)*A**4/24+(61-58*T+T*T+600*C-330*EP2)*A**6/720));return{x,y}}
+function utm2ll(E,Nn,z){const e4=E2*E2,e6=e4*E2,Mm=Nn/K0,mu=Mm/(GA*(1-E2/4-3*e4/64-5*e6/256)),e1=(1-Math.sqrt(1-E2))/(1+Math.sqrt(1-E2));
+  const p1=mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu)+(1097*e1**4/512)*Math.sin(8*mu);
+  const s=Math.sin(p1),c1=Math.cos(p1),t=Math.tan(p1),C1=EP2*c1*c1,T1=t*t,N1=GA/Math.sqrt(1-E2*s*s),R1=GA*(1-E2)/Math.pow(1-E2*s*s,1.5),D=(E-500000)/(N1*K0);
+  const lat=p1-(N1*t/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*EP2)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*EP2-3*C1*C1)*D**6/720);
+  const lon=cmer(z)*D2R+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*EP2+24*T1*T1)*D**5/120)/c1;return{lat:lat*R2D,lon:lon*R2D}}
+function localFrame(lat0,lon0){const s=Math.sin(lat0*D2R),w=Math.sqrt(1-E2*s*s),mLat=GA*(1-E2)/(w*w*w)*D2R,mLon=GA/w*Math.cos(lat0*D2R)*D2R;
+  return{toLL:p=>({lat:lat0+p.y/mLat,lon:lon0+p.x/mLon}),fromLL:ll=>({x:(ll.lon-lon0)*mLon,y:(ll.lat-lat0)*mLat})}}
+function qiblaBearing(lat,lon){const p1=lat*D2R,p2=KAABA.lat*D2R,dl=(KAABA.lon-lon)*D2R;
+  return(Math.atan2(Math.sin(dl)*Math.cos(p2),Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl))*R2D+360)%360}
+function buildGeo(){
+  if(S.coordMode==='utm'){const z=clamp(Math.round(+S.zone)||38,1,60);let E=0,N=0;S.verts.forEach(v=>{E+=+v.x;N+=+v.y});E/=S.verts.length;N/=S.verts.length;
+    const ref=utm2ll(E,N,z),F=localFrame(ref.lat,ref.lon);return{ref,z,F,L:S.verts.map(v=>F.fromLL(utm2ll(+v.x,+v.y,z)))}}
+  const ref={lat:+S.refLat||0,lon:+S.refLon||0},F=localFrame(ref.lat,ref.lon);return{ref,z:autoZone(ref.lon),F,L:S.verts.map(v=>({x:+v.x||0,y:+v.y||0}))}}
+const toLL=(g,p)=>g.F.toLL(p), toUTM=(g,p)=>{const ll=g.F.toLL(p);return ll2utm(ll.lat,ll.lon,g.z)};
+
+/* ---------- layout model ---------- */
+function mosqueParts(m,anc){
+  const{uh,vh,W,Dm,Dw,Ds}=m;const R=(u0,u1,v0,v1)=>[[u0,v0],[u1,v0],[u1,v1],[u0,v1]].map(([u,v])=>({x:anc.x+uh.x*u+vh.x*v,y:anc.y+uh.y*u+vh.y*v}));
+  const parts=[],uv=[];const put=(k,b,extra)=>{uv.push(b);parts.push(Object.assign({k,poly:R(...b),uv:b},extra))};
+  put('hall',[-W/2,W/2,-Dm,0],{area:W*Dm,cap:m.men});
+  put('mihrab',[-2,2,0,2.5],{area:10});
+  if(m.women>0)put('women',[-W/2,W/2,-Dm-Dw,-Dm],{area:W*Dw,cap:m.women});
+  let rear=-Dm-Dw;
+  if(Ds>0.5){put('sahn',[-W/2,W/2,rear-Ds,rear],{area:W*Ds,cap:Math.floor(W*Ds/(+S.aPer||1.2))});rear-=Ds}
+  const half=Math.max(4,W/2-1),dA=8;
+  const aM=Math.max(15,m.men*(+S.ablPer||0));let wm=aM/dA,dm=dA;if(wm>half){wm=half;dm=aM/wm}
+  put('ablM',[-W/2,-W/2+wm,rear-dm,rear],{area:aM});
+  if(m.women>0){const aW=Math.max(10,m.women*(+S.ablPer||0));let ww=aW/dA,dw=dA;if(ww>half){ww=half;dw=aW/ww}put('ablW',[W/2-ww,W/2,rear-dw,rear],{area:aW})}
+  if(S.minaret){const s=+S.minSize||5;put('minaret',S.minSide==='right'?[W/2,W/2+s,-s,0]:[-W/2-s,-W/2,-s,0],{area:s*s})}
+  const ub=[Math.min(...uv.map(b=>b[0])),Math.max(...uv.map(b=>b[1])),Math.min(...uv.map(b=>b[2])),Math.max(...uv.map(b=>b[3]))];
+  const b=+S.buf||0;return{parts,outer:R(...ub),outerBuf:R(ub[0]-b,ub[1]+b,ub[2]-b,ub[3]+b),ub}}
+function housePart(m,anc){if(!S.housing||!(+S.housingArea>0))return null;const A=+S.housingArea,hw=Math.sqrt(A*1.5),hd=A/hw,{uh,vh}=m;
+  const R=(u0,u1,v0,v1)=>[[u0,v0],[u1,v0],[u1,v1],[u0,v1]].map(([u,v])=>({x:anc.x+uh.x*u+vh.x*v,y:anc.y+uh.y*u+vh.y*v}));const b=+S.buf||0;
+  return{k:'house',poly:R(-hw/2,hw/2,-hd/2,hd/2),area:A,outerBuf:R(-hw/2-b,hw/2+b,-hd/2-b,hd/2+b),hw,hd}}
+
+function autoPlace(m){
+  const B=m.bOk?m.B:m.P,bb=bbox(B),c0=centroid(B),step=Math.max(2,Math.min(bb.x1-bb.x0,bb.y1-bb.y0)/45);let best=null;
+  for(let x=bb.x0;x<=bb.x1;x+=step)for(let y=bb.y0;y<=bb.y1;y+=step){const g=mosqueParts(m,{x,y});
+    if(g.parts.every(p=>polyIn(p.poly,B))){const d=(x-c0.x)**2+(y-c0.y)**2;if(!best||d<best.d)best={d,x,y}}}
+  S.mosque=best?{x:+best.x.toFixed(2),y:+best.y.toFixed(2)}:{x:c0.x,y:c0.y};
+  const g=mosqueParts(m,S.mosque),hp0=housePart(m,{x:0,y:0});
+  if(hp0){const target=add(S.mosque,mul(m.vh,g.ub[2]-hp0.hd/2-(+S.buf||0)-4));let hb=null;
+    for(let x=bb.x0;x<=bb.x1;x+=step)for(let y=bb.y0;y<=bb.y1;y+=step){const h=housePart(m,{x,y});
+      if(polyIn(h.poly,B)&&!overlap(h.poly,g.outerBuf)){const d=(x-target.x)**2+(y-target.y)**2;if(!hb||d<hb.d)hb={d,x,y}}}
+    S.house=hb?{x:+hb.x.toFixed(2),y:+hb.y.toFixed(2)}:{...target}}
+  else S.house=S.house||{x:c0.x,y:c0.y};
+}
+
+function compute(){
+  const geo=buildGeo(),P=geo.L,n=P.length,m={geo,P,warn:[]};
+  if(n<3){m.bad=true;m.warn.push('أدخل ثلاث نقاط على الأقل لحدود الأرض.');return m}
+  const A=polyArea(P);m.sign=A>=0?1:-1;m.plotArea=Math.abs(A);m.convex=isConvex(P);
+  const sbs=S.verts.map(v=>Math.max(0,+v.sb||0));m.hasSb=sbs.some(v=>v>0);m.B=offsetPoly(P,sbs,m.sign);
+  const bA=polyArea(m.B);m.bOk=Math.sign(bA)===m.sign&&Math.abs(bA)>1&&isConvex(m.B);m.bArea=m.bOk?Math.abs(bA):0;
+  m.edges=P.map((p,i)=>{const b=P[(i+1)%n],d=sub(b,p),len=Math.hypot(d.x,d.y)||1,nOut=mul({x:-d.y/len,y:d.x/len},-m.sign),az=(Math.atan2(nOut.x,nOut.y)*R2D+360)%360;
+    return{a:p,b,len,nOut,az,face:FACES[Math.round(az/45)%8],name:S.verts[i].name||'',sb:sbs[i]}});
+  m.q=S.qAuto?qiblaBearing(geo.ref.lat,geo.ref.lon):((+S.qManual%360)+360)%360;
+  const q=m.q*D2R;m.vh={x:Math.sin(q),y:Math.cos(q)};m.uh={x:Math.cos(q),y:-Math.sin(q)};
+  m.perim=m.edges.reduce((s2,e)=>s2+e.len,0);m.land=S.projType==='land';
+  if(m.land){Object.assign(m,{tot:0,men:0,women:0,W:0,D:0,Dm:0,Dw:0,Ds:0,g:{parts:[],outer:[],outerBuf:[],ub:[0,0,0,0]},h:null,req:0,stalls:[],prov:0,roofed:0,cover:0});
+    if(!m.convex)m.warn.push('حدود الأرض غير محدبة؛ حساب خط الارتداد تقريبي.');if(!m.bOk&&sbs.some(v=>v>0))m.warn.push('الارتدادات أكبر من الأرض. خفّض قيم الارتداد.');return m}
+  const tot=Math.max(0,Math.round(+S.cap||0)),women=Math.round(tot*clamp(+S.womenPct||0,0,100)/100),men=tot-women,a=+S.aPer||1.2;
+  const Ar=Math.max(1,tot*a),D=Math.sqrt(Ar/(+S.hallRatio||1.6)),W=Ar/D;
+  Object.assign(m,{tot,men,women,W,D,Dm:men*a/W,Dw:women*a/W,Ds:Math.max(0,+S.sahnRatio||0)*D});
+  if(!S.mosque||!S.house)autoPlace(m);
+  m.g=mosqueParts(m,S.mosque);m.h=housePart(m,S.house);
+  const BB=m.bOk?m.B:m.P;
+  m.mosqueIn=m.g.parts.every(p=>polyIn(p.poly,BB));m.houseIn=!m.h||polyIn(m.h.poly,BB);m.houseHit=!!m.h&&overlap(m.h.poly,m.g.outer);
+  // parking
+  m.req=Math.ceil(tot/(+S.parkRatio||12));m.stalls=[];
+  if(m.bOk){const ei=(+S.parkEdge>=0&&+S.parkEdge<n)?+S.parkEdge:m.edges.reduce((bi,e,i,arr)=>e.len>arr[bi].len?i:bi,0),E0=m.edges[ei];
+    const e={x:(E0.b.x-E0.a.x)/E0.len,y:(E0.b.y-E0.a.y)/E0.len},nin=mul(E0.nOut,-1),o=E0.a;
+    const st=p=>({s:dot(sub(p,o),e),t:dot(sub(p,o),nin)}),fr=(s,t)=>({x:o.x+e.x*s+nin.x*t,y:o.y+e.y*s+nin.y*t});
+    const Bst=m.B.map(st),s0=Math.min(...Bst.map(p=>p.s)),s1=Math.max(...Bst.map(p=>p.s)),t0=Math.min(...Bst.map(p=>p.t)),t1=Math.max(...Bst.map(p=>p.t));
+    const w=Math.max(1.8,+S.stallW||2.5),L=Math.max(3.5,+S.stallL||5.5),ai=Math.max(3,+S.aisle||6),obs=[m.g.outerBuf];if(m.h)obs.push(m.h.outerBuf);
+    let guard=0;for(let t=t0+ai;t+L<=t1+1e-6&&guard<4000;t+=2*L+ai){for(const r of [t,t+L]){if(r+L>t1+1e-6)continue;
+      for(let s=s0;s+w<=s1+1e-6;s+=w){guard++;const quad=[fr(s,r),fr(s+w,r),fr(s+w,r+L),fr(s,r+L)];
+        if(polyIn(quad,m.B)&&!obs.some(ob=>overlap(quad,ob)))m.stalls.push(quad)}}}
+    if(S.parkLimit&&m.stalls.length>m.req){const ctr=centroid(m.g.outer);m.stalls.sort((A2,B2)=>{const ca=centroid(A2),cb=centroid(B2);return((ca.x-ctr.x)**2+(ca.y-ctr.y)**2)-((cb.x-ctr.x)**2+(cb.y-ctr.y)**2)});m.stalls=m.stalls.slice(0,m.req)}}
+  m.prov=m.stalls.length;
+  const roofed=m.g.parts.filter(p=>p.k!=='sahn').reduce((s,p)=>s+(p.area||0),0)+(m.h?m.h.area:0);
+  m.roofed=roofed;m.cover=m.plotArea?roofed/m.plotArea*100:0;
+  if(!m.convex)m.warn.push('حدود الأرض غير محدبة؛ حساب خط الارتداد تقريبي. راجع ترتيب النقاط.');
+  if(!m.bOk)m.warn.push('الارتدادات أكبر من الأرض أو تُنتج شكلاً غير صالح. خفّض قيم الارتداد.');
+  else{if(!m.mosqueIn)m.warn.push('كتلة المسجد لا تتسع داخل المساحة المتاحة بهذا الاتجاه. حرّكها، أو خفّض الطاقة أو الارتداد أو نسبة الصحن.');
+    if(m.h&&!m.houseIn)m.warn.push('السكن خارج خط الارتداد. اسحبه إلى داخل المساحة المتاحة.');
+    if(m.houseHit)m.warn.push('السكن يتداخل مع كتلة المسجد.');
+    if(m.prov<m.req)m.warn.push(`المواقف المتوفرة ${m.prov} أقل من المطلوب ${m.req} (عجز ${m.req-m.prov}). جرّب محاذاة الصفوف مع ضلع آخر أو تقليل الطاقة.`)}
+  return m}
+
+/* ---------- formatting ---------- */
+const nfCache={};
+function fmt(v,d=0,sheet=true){const loc=sheet&&S.sheet.digits==='arab'?'ar-u-nu-arab':'en-US',k=loc+d;
+  nfCache[k]=nfCache[k]||new Intl.NumberFormat(loc,{minimumFractionDigits:d,maximumFractionDigits:d});return nfCache[k].format(v)}
+const fmtU=(v,d=0)=>fmt(v,d,false);
+
+/* ---------- canvas drawing helpers (paper millimetres) ---------- */
+function font(size,w=400){return `${w} ${Math.max(0.5,size*K)}px ${FONT}`}
+function txt(s,x,y,size,o={}){c.save();c.font=font(size,o.w||400);c.fillStyle=o.c||INK;c.textAlign=o.a||'right';c.textBaseline=o.b||'alphabetic';c.direction='rtl';
+  if(o.rot){c.translate(x*K,y*K);c.rotate(o.rot);c.fillText(s,0,0)}else c.fillText(s,x*K,y*K);c.restore()}
+function tw(s,size,w=400){c.save();c.font=font(size,w);const v=c.measureText(s).width/K;c.restore();return v}
+function fit(s,size,maxW,w=400){s=String(s??'');if(tw(s,size,w)<=maxW)return s;while(s.length>1&&tw(s+'…',size,w)>maxW)s=s.slice(0,-1);return s+'…'}
+function wrap(s,size,maxW,w=400){const out=[];String(s||'').split('\n').forEach(par=>{let line='';par.split(/\s+/).forEach(word=>{const t=line?line+' '+word:word;
+  if(tw(t,size,w)>maxW&&line){out.push(line);line=word}else line=t});out.push(line)});return out}
+function lineW(mm){c.lineWidth=Math.max(0.6,mm*K)}
+function rectPath(x,y,w,h){c.beginPath();c.rect(x*K,y*K,w*K,h*K)}
+function pathPaper(pts){c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p.x*K,p.y*K):c.moveTo(p.x*K,p.y*K));c.closePath()}
+function hline(x0,x1,y,lw=0.25,col=RULE){c.beginPath();c.moveTo(x0*K,y*K);c.lineTo(x1*K,y*K);lineW(lw);c.strokeStyle=col;c.stroke()}
+
+function paperDims(){let[w,h]=PAPERS[S.sheet.paper]||PAPERS.A1;if(S.sheet.orient==='portrait')[w,h]=[h,w];return{W:w,H:h}}
+function sheetLayout(W,H){const fr={x:20,y:10,w:W-30,h:H-20},land=W>=H;let draw,cols,fs;
+  if(land){const pw=clamp(W*0.22,62,170);draw={x:fr.x,y:fr.y,w:fr.w-pw,h:fr.h};cols=[{x:fr.x+fr.w-pw,y:fr.y,w:pw,h:fr.h}];fs=clamp(Math.min(pw/30,fr.h/48),2,5.2)}
+  else{const ph=clamp(H*0.3,72,330),cw=fr.w/2;draw={x:fr.x,y:fr.y,w:fr.w,h:fr.h-ph};
+    cols=[{x:fr.x+cw,y:fr.y+fr.h-ph,w:cw,h:ph},{x:fr.x,y:fr.y+fr.h-ph,w:cw,h:ph}];fs=clamp(Math.min(cw/30,ph/24),2,5.2)}
+  return{fr,draw,cols,fs,land}}
+
+/* plan transform */
+function rotV(p,a){return{x:p.x*Math.cos(a)-p.y*Math.sin(a),y:p.x*Math.sin(a)+p.y*Math.cos(a)}}
+function w2p(p){const r=rotV(p,PT.vr);return{x:PT.ox+(r.x-PT.rc.x)*PT.k,y:PT.oy-(r.y-PT.rc.y)*PT.k}}
+function p2w(q){const r={x:(q.x-PT.ox)/PT.k+PT.rc.x,y:-(q.y-PT.oy)/PT.k+PT.rc.y};return rotV(r,-PT.vr)}
+function pvec(v){const r=rotV(v,PT.vr);return{x:r.x,y:-r.y}}
+function pathW(pts){pathPaper(pts.map(w2p))}
+
+function setupPlan(m,L){const d=L.draw,fs=L.fs,capH=fs*3.4,pa={x:d.x+fs,y:d.y+fs,w:d.w-2*fs,h:d.h-2*fs-capH};
+  const vr=(+S.sheet.vr||0)*D2R,rp=m.P.map(p=>rotV(p,vr)),bb=bbox(rp),bw=Math.max(1,bb.x1-bb.x0),bh=Math.max(1,bb.y1-bb.y0);
+  let scale=+S.sheet.scale;if(!scale){scale=SCALES.find(s=>bw*1000/s<=pa.w*0.84&&bh*1000/s<=pa.h*0.84)||SCALES.at(-1)}
+  PT={vr,rc:{x:(bb.x0+bb.x1)/2,y:(bb.y0+bb.y1)/2},k:1000/scale,scale,ox:pa.x+pa.w/2+(+S.sheet.panX||0),oy:pa.y+pa.h/2+(+S.sheet.panY||0),pa,capH}}
+
+/* satellite tiles (Esri World Imagery, Web Mercator) */
+const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/';
+const TILES=new Map();let TILE_WAIT=null,TILE_ERR=0,TILE_OK=0;
+const lx=(lon,z)=>(lon+180)/360*2**z, ly=(lat,z)=>{const r=lat*D2R;return(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**z};
+const tlon=(x,z)=>x/2**z*360-180, tlat=(y,z)=>Math.atan(Math.sinh(Math.PI*(1-2*y/2**z)))*R2D;
+function tileImg(z,x,y){const k=z+'/'+y+'/'+x;let t=TILES.get(k);
+  if(!t){if(TILES.size>2500)TILES.clear();const im=new Image();im.crossOrigin='anonymous';t={im,ok:false,err:false};
+    t.p=new Promise(res=>{im.onload=()=>{t.ok=true;TILE_OK++;res();schedule()};im.onerror=()=>{t.err=true;TILE_ERR++;res();schedule()}});im.src=ESRI+k;TILES.set(k,t)}
+  if(TILE_WAIT&&!t.ok&&!t.err)TILE_WAIT.push(t.p);return t}
+function tileRange(lat0,lats,lons,pxPerM,maxN){let z=clamp(Math.ceil(Math.log2(156543.034*Math.cos(lat0*D2R)*pxPerM)),2,+S.img.maxZ||19),r;
+  for(;;){const x0=Math.floor(lx(Math.min(...lons),z)),x1=Math.floor(lx(Math.max(...lons),z)),y0=Math.floor(ly(Math.max(...lats),z)),y1=Math.floor(ly(Math.min(...lats),z));
+    r={z,x0,x1,y0,y1};if((x1-x0+1)*(y1-y0+1)<=maxN||z<=2)return r;z--}}
+function paintTiles(r,F,toPx){for(let x=r.x0;x<=r.x1;x++)for(let y=r.y0;y<=r.y1;y++){const t=tileImg(r.z,x,y);if(!t.ok)continue;
+  const TL=toPx(F.fromLL({lat:tlat(y,r.z),lon:tlon(x,r.z)})),TR=toPx(F.fromLL({lat:tlat(y,r.z),lon:tlon(x+1,r.z)})),BL=toPx(F.fromLL({lat:tlat(y+1,r.z),lon:tlon(x,r.z)}));
+  c.setTransform((TR.x-TL.x)/256,(TR.y-TL.y)/256,(BL.x-TL.x)/256,(BL.y-TL.y)/256,TL.x,TL.y);c.drawImage(t.im,-0.4,-0.4,256.8,256.8)}c.setTransform(1,0,0,1,0,0)}
+function drawTiles(m,d){const F=m.geo.F,cs=[{x:d.x,y:d.y},{x:d.x+d.w,y:d.y},{x:d.x,y:d.y+d.h},{x:d.x+d.w,y:d.y+d.h}].map(q=>F.toLL(p2w(q)));
+  const r=tileRange(m.geo.ref.lat,cs.map(a=>a.lat),cs.map(a=>a.lon),PT.k*K,400);
+  c.save();c.fillStyle='#5b6461';c.fillRect(d.x*K,d.y*K,d.w*K,d.h*K);c.globalAlpha=clamp(+S.img.opacity||1,0.05,1);
+  paintTiles(r,F,p=>{const q=w2p(p);return{x:q.x*K,y:q.y*K}});c.restore()}
+function drawPlan(m,L){
+  const d=L.draw,fs=L.fs,esri=S.img.show&&S.img.src==='esri',img=(IMG&&S.img.show&&S.img.src==='upload')||esri;
+  c.save();rectPath(d.x,d.y,d.w,d.h);c.clip();
+  if(esri)drawTiles(m,d);
+  if(img&&!esri){const ctr=w2p({x:+S.img.cx||0,y:+S.img.cy||0}),wm=Math.max(1,+S.img.widthM||100),wp=wm*PT.k*K,hp=wp*IMG.naturalHeight/IMG.naturalWidth;
+    c.save();c.globalAlpha=clamp(+S.img.opacity||1,0.05,1);c.translate(ctr.x*K,ctr.y*K);c.rotate(-((+S.img.rot||0)*D2R+PT.vr));c.drawImage(IMG,-wp/2,-hp/2,wp,hp);c.restore()}
+  // landscaping band + buildable
+  pathW(m.P);c.fillStyle=img?'rgba(150,200,110,0.38)':COL.land.f;c.fill();
+  if(m.bOk){pathW(m.B);c.fillStyle=img?'rgba(255,255,255,0.18)':'#ffffff';c.fill()}
+  // parking
+  c.fillStyle=img?'rgba(225,231,240,0.85)':COL.park.f;c.strokeStyle=COL.park.s;lineW(0.08);
+  for(const q of m.stalls){pathW(q);c.fill();c.stroke()}
+  // buildings
+  const parts=[...m.g.parts];if(m.h)parts.push(m.h);
+  for(const p of parts){pathW(p.poly);c.fillStyle=COL[p.k].f;c.globalAlpha=img?0.93:1;c.fill();c.globalAlpha=1;c.strokeStyle=COL[p.k].s;lineW(p.k==='hall'?0.4:0.25);c.stroke()}
+  // prayer rows hint inside hall
+  if(!m.land){const hp=m.g.parts.find(p=>p.k==='hall');if(hp){const[u0,u1,v0,v1]=hp.uv,anc=S.mosque,rowStep=Math.max(1.2,(v1-v0)/14);c.save();pathW(hp.poly);c.clip();
+    c.strokeStyle='rgba(0,0,0,0.12)';lineW(0.08);for(let v=v1-1.2;v>v0;v-=rowStep*Math.max(1,Math.ceil(0.9/(rowStep*PT.k)))){const a=add(anc,add(mul(m.uh,u0),mul(m.vh,v))),b=add(anc,add(mul(m.uh,u1),mul(m.vh,v)));
+      const pa=w2p(a),pb=w2p(b);c.beginPath();c.moveTo(pa.x*K,pa.y*K);c.lineTo(pb.x*K,pb.y*K);c.stroke()}c.restore()}}
+  // setback + plot
+  if(m.bOk&&m.hasSb){pathW(m.B);c.setLineDash([2.4*K,1.2*K]);c.strokeStyle=COL.sb;lineW(0.3);c.stroke();c.setLineDash([])}
+  pathW(m.P);c.strokeStyle=S.outlineColor||'#006c73';lineW(0.55);c.stroke();
+  for(let ei=0;ei<m.P.length;ei++){
+    const a=w2p(m.P[ei]),b=w2p(m.P[(ei+1)%m.P.length]);
+    c.beginPath();c.moveTo(a.x*K,a.y*K);c.lineTo(b.x*K,b.y*K);
+    c.strokeStyle=(S.edgeColors||[])[ei]||S.outlineColor||'#006c73';lineW(0.65);c.stroke();
+  }
+  m.P.forEach((p,i)=>{const q=w2p(p);c.beginPath();c.arc(q.x*K,q.y*K,0.7*K,0,Math.PI*2);c.fillStyle=RULE;c.fill();
+    const out=pvec(add(m.edges[i].nOut,m.edges[(i-1+m.P.length)%m.P.length].nOut));const l=Math.hypot(out.x,out.y)||1;
+    txt(fmt(i+1),q.x+out.x/l*fs*1.3,q.y+out.y/l*fs*1.3,fs*0.75,{a:'center',b:'middle',w:600})});
+  // labels
+  const lab=(p,lines)=>{const pp=p.poly.map(w2p),bb=bbox(pp),cx=(bb.x0+bb.x1)/2,cy=(bb.y0+bb.y1)/2,minD=Math.min(bb.x1-bb.x0,bb.y1-bb.y0);
+    let sz=Math.min(fs*0.85,minD/(lines.length*1.9));if(sz<fs*0.32)return;const lh=sz*1.35,y0=cy-(lines.length-1)*lh/2;
+    lines.forEach((t,i)=>txt(t,cx,y0+i*lh,i?sz*0.85:sz,{a:'center',b:'middle',w:i?400:600,c:p.k==='ablM'||p.k==='ablW'?'#fff':INK}))};
+  for(const p of parts){if(p.k==='mihrab'||p.k==='minaret')continue;const L2=[LBL[p.k][0]];
+    if(p.area)L2.push(fmt(p.area)+' م²');if(p.cap&&p.k!=='sahn')L2.push(fmt(p.cap)+' مصلٍ');lab(p,L2)}
+  // qibla arrow
+  if(!m.land){const a=add(S.mosque,mul(m.vh,2.5)),pa=w2p(a),dv=pvec(m.vh),len=fs*4.2,pb={x:pa.x+dv.x*len,y:pa.y+dv.y*len};
+    c.strokeStyle=COL.qibla;c.fillStyle=COL.qibla;lineW(0.4);c.beginPath();c.moveTo(pa.x*K,pa.y*K);c.lineTo(pb.x*K,pb.y*K);c.stroke();
+    const nx=-dv.y,ny=dv.x,h=fs*0.9;c.beginPath();c.moveTo((pb.x+dv.x*h)*K,(pb.y+dv.y*h)*K);c.lineTo((pb.x+nx*h*0.45)*K,(pb.y+ny*h*0.45)*K);c.lineTo((pb.x-nx*h*0.45)*K,(pb.y-ny*h*0.45)*K);c.closePath();c.fill();
+    txt('القبلة',pb.x+dv.x*fs*2.2,pb.y+dv.y*fs*2.2,fs*0.8,{a:'center',b:'middle',w:600,c:COL.qibla})}
+  // highlighted edge + edge numbers
+  if(HL>=0&&m.edges[HL]){const e=m.edges[HL],a=w2p(e.a),b=w2p(e.b);c.beginPath();c.moveTo(a.x*K,a.y*K);c.lineTo(b.x*K,b.y*K);c.strokeStyle='#ff8a00';lineW(1.4);c.globalAlpha=0.85;c.stroke();c.globalAlpha=1}
+  m.edges.forEach((e,i)=>{const mid=w2p(mul(add(e.a,e.b),0.5)),r=fs*0.62;c.beginPath();c.arc(mid.x*K,mid.y*K,r*K,0,Math.PI*2);c.fillStyle=i===HL?'#ff8a00':'#0f7f68';c.fill();c.strokeStyle='#fff';lineW(0.2);c.stroke();
+    txt(fmt(i+1),mid.x,mid.y+r*0.05,r*1.05,{a:'center',b:'middle',w:700,c:'#fff'})});
+  // edge dimensions
+  if(S.sheet.dims)m.edges.forEach(e=>{const pa=w2p(e.a),pb=w2p(e.b),mid={x:(pa.x+pb.x)/2,y:(pa.y+pb.y)/2},on=pvec(e.nOut);
+    let ang=Math.atan2(pb.y-pa.y,pb.x-pa.x);if(ang>Math.PI/2)ang-=Math.PI;if(ang<=-Math.PI/2)ang+=Math.PI;
+    const t=(e.name?e.name+'  —  ':'')+fmt(e.len,2)+' م';txt(t,mid.x+on.x*fs*1.55,mid.y+on.y*fs*1.55,fs*0.8,{a:'center',b:'middle',rot:ang,w:500});
+    if(m.bOk&&e.sb>0&&e.sb*PT.k>fs*0.9)txt('ارتداد '+fmt(e.sb,e.sb%1?1:0)+' م',mid.x-on.x*(e.sb*PT.k/2),mid.y-on.y*(e.sb*PT.k/2),Math.min(fs*0.62,e.sb*PT.k*0.55),{a:'center',b:'middle',rot:ang,c:COL.sb})});
+  c.restore();
+  // compass (top-left of drawing)
+  {const r=fs*2.6,cx=d.x+fs+r,cy=d.y+fs+r;c.beginPath();c.arc(cx*K,cy*K,r*K,0,Math.PI*2);c.fillStyle='rgba(255,255,255,0.88)';c.fill();c.strokeStyle=RULE;lineW(0.25);c.stroke();
+    const nv=pvec({x:0,y:1}),nx=-nv.y,ny=nv.x;c.beginPath();c.moveTo((cx+nv.x*r*0.92)*K,(cy+nv.y*r*0.92)*K);c.lineTo((cx+nx*r*0.28)*K,(cy+ny*r*0.28)*K);c.lineTo((cx-nv.x*r*0.35)*K,(cy-nv.y*r*0.35)*K);c.closePath();c.fillStyle=RULE;c.fill();
+    c.beginPath();c.moveTo((cx+nv.x*r*0.92)*K,(cy+nv.y*r*0.92)*K);c.lineTo((cx-nx*r*0.28)*K,(cy-ny*r*0.28)*K);c.lineTo((cx-nv.x*r*0.35)*K,(cy-nv.y*r*0.35)*K);c.closePath();c.fillStyle='#fff';c.fill();c.stroke();
+    txt('ش',cx+nv.x*r*1.35,cy+nv.y*r*1.35,fs*0.85,{a:'center',b:'middle',w:700});
+    if(!m.land){const qv=pvec(m.vh);c.beginPath();c.moveTo(cx*K,cy*K);c.lineTo((cx+qv.x*r*0.95)*K,(cy+qv.y*r*0.95)*K);c.strokeStyle=COL.qibla;lineW(0.45);c.stroke();
+    txt('ق',cx+qv.x*r*1.35,cy+qv.y*r*1.35,fs*0.7,{a:'center',b:'middle',w:700,c:COL.qibla})}}
+  if(esri)txt('الصورة: Esri, Maxar, Earthstar Geographics',d.x+d.w-fs*1.2,d.y+fs*1.3,fs*0.5,{c:'#ffffff',w:500});
+  // scale bar + caption
+  {const capY=d.y+d.h-PT.capH*0.42,maxM=(d.w*0.28)/PT.k,pw=10**Math.floor(Math.log10(maxM)),tot=[1,2,5,10].map(x=>x*pw).filter(x=>x<=maxM).pop()||pw,segs=5,sl=tot*PT.k/segs,x0=d.x+fs*1.2,bh=fs*0.45;
+    for(let i=0;i<segs;i++){rectPath(x0+i*sl,capY-bh,sl,bh);c.fillStyle=i%2?'#fff':RULE;c.fill();c.strokeStyle=RULE;lineW(0.15);c.stroke()}
+    [0,Math.round(segs/2),segs].forEach(i=>txt(fmt(tot/segs*i,(tot/segs*i)%1?1:0),x0+i*sl,capY-bh-fs*0.45,fs*0.62,{a:'center'}));
+    txt('م',x0+segs*sl+fs*0.9,capY,fs*0.62,{a:'center'});
+    const xr=d.x+d.w-fs*1.2;txt(S.sheet.planTitle||'',xr,capY-fs*0.15,fs*1.15,{w:700});
+    const tl=tw(S.sheet.planTitle||'',fs*1.15,700);hline(xr-tl,xr,capY+fs*0.35,0.35);
+    txt('مقياس الرسم '+fmt(1)+':'+fmt(PT.scale)+'  على ورق '+S.sheet.paper,xr,capY+fs*1.35,fs*0.7,{c:MUTED})}
+}
+
+/* ---------- side panel blocks ---------- */
+function blkHeader(x,y,w,dr){const fs=LAY.fs,p=fs*0.8;let h=p+fs*1.7;if(dr)txt(fit(S.tb.office,fs*1.6,w-2*p,700),x+w-p,y+h,fs*1.6,{w:700});
+  if(S.tb.officeSub){h+=fs*1.45;if(dr)txt(fit(S.tb.officeSub,fs*0.85,w-2*p),x+w-p,y+h,fs*0.85,{c:MUTED})}return h+p}
+function legendItems(m){if(m.land){const it=[{t:'حدود الأرض',ty:'line',col:RULE}];if(m.hasSb)it.push({t:'خط الارتداد النظامي',ty:'dash',col:COL.sb},{t:'منطقة الارتداد',k:'land'});return it}
+  const it=[{t:'حدود الأرض',ty:'line',col:RULE},{t:'خط الارتداد النظامي',ty:'dash',col:COL.sb},{t:'مصلى الرجال',k:'hall'}];
+  if(m.women>0)it.push({t:'مصلى النساء',k:'women'});if(m.Ds>0.5)it.push({t:'الصحن',k:'sahn'});it.push({t:'المواضئ',k:'ablM'});
+  if(S.minaret)it.push({t:'المئذنة',k:'minaret'});if(m.h)it.push({t:'سكن الإمام والمؤذن',k:'house'});
+  it.push({t:'مواقف السيارات',k:'park'},{t:'التشجير والارتدادات',k:'land'},{t:'اتجاه القبلة',ty:'line',col:COL.qibla});return it}
+function blkLegend(x,y,w,dr,m){const fs=LAY.fs,p=fs*0.8,it=legendItems(m),cols=w>95?2:1,cw=(w-2*p)/cols,rh=fs*1.65;
+  let h=p+fs*1.1;if(dr)txt('مفتاح الرسم',x+w-p,y+h,fs*1.05,{w:700});h+=fs*0.7;
+  it.forEach((e,i)=>{const col=i%cols,row=Math.floor(i/cols),rx=x+w-p-col*cw,ry=y+h+row*rh,sw=fs*2.1,sh=fs*1.05;if(!dr)return;
+    if(e.k){rectPath(rx-sw,ry,sw,sh);c.fillStyle=(COL[e.k]||{}).f||'#eee';c.fill();c.strokeStyle=(COL[e.k]||{}).s||'#999';lineW(0.18);c.stroke()}
+    else{c.beginPath();c.moveTo((rx-sw)*K,(ry+sh/2)*K);c.lineTo(rx*K,(ry+sh/2)*K);c.strokeStyle=e.col;lineW(e.ty==='dash'?0.3:0.5);if(e.ty==='dash')c.setLineDash([1.6*K,0.8*K]);c.stroke();c.setLineDash([])}
+    txt(fit(e.t,fs*0.82,cw-sw-fs*1.2),rx-sw-fs*0.6,ry+sh/2,fs*0.82,{b:'middle'})});
+  return h+Math.ceil(it.length/cols)*rh+p*0.6}
+function tableRows(m){if(m.land){const g=m.geo,r=[['مساحة الأرض',fmt(m.plotArea,2)+' م²'],['المحيط',fmt(m.perim,2)+' م'],['عدد الأضلاع',fmt(m.P.length)]];
+    if(m.hasSb&&m.bOk)r.push(['المساحة داخل الارتدادات',fmt(m.bArea,2)+' م²']);
+    m.edges.forEach((e,i)=>r.push(['الضلع '+fmt(i+1)+'←'+fmt((i+1)%m.P.length+1)+(e.name?' ('+e.name+')':''),fmt(e.len,2)+' م · '+e.face]));
+    r.push(['مركز الأرض',fmt(g.ref.lat,6)+' ، '+fmt(g.ref.lon,6)]);return r}
+  const r=[['مساحة الأرض',fmt(m.plotArea)+' م²'],['المساحة داخل الارتدادات',fmt(m.bArea)+' م²'],
+  ['الطاقة الاستيعابية',fmt(m.tot)+' مصلٍ'],['مساحة المصلي',fmt(+S.aPer,2)+' م²']];
+  const g=k=>m.g.parts.find(p=>p.k===k);
+  r.push(['مصلى الرجال',fmt(g('hall').area)+' م²  ('+fmt(m.men)+')']);if(g('women'))r.push(['مصلى النساء',fmt(g('women').area)+' م²  ('+fmt(m.women)+')']);
+  if(g('sahn'))r.push(['الصحن',fmt(g('sahn').area)+' م²  (+'+fmt(g('sahn').cap)+')']);
+  r.push(['المواضئ',fmt(m.g.parts.filter(p=>p.k==='ablM'||p.k==='ablW').reduce((s,p)=>s+p.area,0))+' م²']);
+  if(m.h)r.push(['سكن الإمام والمؤذن',fmt(m.h.area)+' م²']);
+  r.push(['المسطح المسقوف',fmt(m.roofed)+' م²'],['نسبة التغطية',fmt(m.cover,1)+'٪'],['المواقف المطلوبة',fmt(m.req)+'  (موقف/'+fmt(+S.parkRatio)+' مصلٍ)'],
+    ['المواقف المتوفرة',fmt(m.prov)],['اتجاه القبلة',fmt(m.q,1)+'° من الشمال']);return r}
+function blkTable(x,y,w,dr,m){const fs=LAY.fs,p=fs*0.8,rows=tableRows(m),rh=fs*1.55;let h=p+fs*1.1;if(dr)txt('جدول المساحات',x+w-p,y+h,fs*1.05,{w:700});h+=fs*0.7;
+  rows.forEach((r,i)=>{const ry=y+h+i*rh;if(!dr)return;if(i%2===0){rectPath(x+p*0.5,ry,w-p,rh);c.fillStyle='#f2f2ee';c.fill()}
+    const bad=(r[0]==='المواقف المتوفرة'&&m.prov<m.req);
+    txt(fit(r[0],fs*0.8,w*0.48),x+w-p,ry+rh/2,fs*0.8,{b:'middle',c:MUTED});txt(fit(r[1],fs*0.8,w*0.5),x+p,ry+rh/2,fs*0.8,{a:'left',b:'middle',w:600,c:bad?'#b3261e':INK})});
+  return h+rows.length*rh+p*0.6}
+function blkCoords(x,y,w,dr,m){const fs=LAY.fs,p=fs*0.8,rh=fs*1.4,g=m.geo,sz=fs*0.72;let h=p+fs*1.1;
+  if(dr)txt('جدول الإحداثيات — UTM '+fmt(g.z)+' شمال (WGS 84)',x+w-p,y+h,fs*1.0,{w:700});h+=fs*0.6;
+  const cw=[0.12,0.35,0.35,0.18].map(f=>f*(w-2*p)),hdr=['نقطة','الشرقيات E','الشماليات N','الضلع م'];
+  const rows=m.P.map((pt,i)=>{const u=toUTM(g,pt);return[fmt(i+1),fmt(u.x,2),fmt(u.y,2),fmt(m.edges[i].len,2)]});
+  if(dr){[hdr,...rows].forEach((r,ri)=>{const ry=y+h+ri*rh;let cx=x+w-p;if(ri===0){rectPath(x+p*0.5,ry,w-p,rh);c.fillStyle='#e9e9e4';c.fill()}else if(ri%2===0){rectPath(x+p*0.5,ry,w-p,rh);c.fillStyle='#f4f4f0';c.fill()}
+    r.forEach((v,ci)=>{txt(fit(v,sz,cw[ci]-fs*0.3,ri?400:600),cx-cw[ci]/2,ry+rh/2,sz,{a:'center',b:'middle',w:ri?400:600,c:ri?INK:MUTED});cx-=cw[ci]})})}
+  return h+(rows.length+1)*rh+p*0.6}
+function blkNotes(x,y,w,dr){const fs=LAY.fs,p=fs*0.8,lines=wrap(S.tb.notes,fs*0.78,w-2*p);let h=p+fs*1.1;if(dr)txt('ملاحظات',x+w-p,y+h,fs*1.05,{w:700});h+=fs*0.5;
+  lines.forEach((l,i)=>{if(dr)txt(l,x+w-p,y+h+(i+1)*fs*1.3,fs*0.78)});return h+lines.length*fs*1.3+p}
+function blkTitle(x,y,w,dr){const fs=LAY.fs,ch=fs*2.75,sc=PT?('1:'+fmt(PT.scale)+' ('+S.sheet.paper+')'):'';
+  const rows=[[['المشروع',S.tb.project,1]],[['عنوان اللوحة',S.tb.title,1]],[['المالك',S.tb.client],['الموقع',S.tb.location]],[['رقم اللوحة',S.tb.no,1],['مقياس الرسم',sc]],[['التاريخ',S.tb.date],['الإصدار',S.tb.rev]],[['الرسام',S.tb.drawn],['المدقق',S.tb.checked]]];
+  if(dr){rows.forEach((r,i)=>{const ry=y+i*ch,cw=w/r.length;r.forEach((cell,j)=>{const cx=x+w-j*cw;rectPath(cx-cw,ry,cw,ch);c.strokeStyle=RULE;lineW(0.22);c.stroke();
+    txt(cell[0],cx-fs*0.5,ry+fs*0.95,fs*0.62,{c:MUTED});txt(fit(cell[1]||'—',fs*(cell[2]?0.98:0.88),cw-fs,cell[2]?700:500),cx-fs*0.5,ry+ch-fs*0.6,fs*(cell[2]?0.98:0.88),{w:cell[2]?700:500})})})}
+  return rows.length*ch}
+
+function drawPanel(m,L){const blocks=[['h',blkHeader]];if(S.sheet.legend)blocks.push(['l',blkLegend]);if(S.sheet.table)blocks.push(['t',blkTable]);if(S.sheet.coords)blocks.push(['c',blkCoords]);if(S.sheet.notes&&S.tb.notes)blocks.push(['n',blkNotes]);
+  const cols=L.cols,last=cols.length-1,tbh=blkTitle(0,0,cols[last].w,false);let ci=0,y=cols[0].y;L.dropped=0;
+  cols.forEach(col=>{rectPath(col.x,col.y,col.w,col.h);c.strokeStyle=RULE;lineW(0.35);c.stroke()});
+  for(const[,fn]of blocks){while(ci<cols.length){const col=cols[ci],limit=col.y+col.h-(ci===last?tbh:0),h=fn(col.x,y,col.w,false,m);
+      if(y+h<=limit+0.01){fn(col.x,y,col.w,true,m);y+=h;if(y<limit-0.5)hline(col.x,col.x+col.w,y,0.22);break}
+      ci++;if(ci<cols.length)y=cols[ci].y}
+    if(ci>=cols.length){L.dropped++;ci=cols.length-1;y=cols[ci].y+cols[ci].h}}
+  const tc=cols[last];blkTitle(tc.x,tc.y+tc.h-tbh,tc.w,true)}
+
+function drawSheet(ctx,ppm,m){const pc=c,pk=K;c=ctx;K=ppm;const{W,H}=paperDims();
+  c.setTransform(1,0,0,1,0,0);c.fillStyle='#ffffff';c.fillRect(0,0,W*K,H*K);
+  const L=sheetLayout(W,H);LAY=L;
+  if(m.bad){txt('أدخل حدود الأرض',W/2,H/2,10,{a:'center'});c=pc;K=pk;return L}
+  setupPlan(m,L);drawPlan(m,L);drawPanel(m,L);
+  rectPath(L.fr.x,L.fr.y,L.fr.w,L.fr.h);c.strokeStyle=RULE;lineW(0.6);c.stroke();
+  rectPath(5,5,W-10,H-10);lineW(0.18);c.stroke();
+  c=pc;K=pk;return L}
+
+/* ---------- preview ---------- */
+const cv=$('#cv'),desk=$('#desk');let raf=0;
+function schedule(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render()})}
+function render(){M=compute();const{W,H}=paperDims(),dpr=window.devicePixelRatio||1,avail=Math.max(200,desk.clientWidth-36),availH=Math.max(200,desk.clientHeight-36);
+  let cssW=Math.min(avail,availH*W/H*(window.innerWidth<=900?10:1));cssW=Math.max(260,cssW)*zoom;const cssH=cssW*H/W;
+  let pxW=cssW*dpr,pxH=cssH*dpr;const cap=14e6;if(pxW*pxH>cap){const f=Math.sqrt(cap/(pxW*pxH));pxW*=f;pxH*=f}
+  cv.style.width=cssW+'px';cv.style.height=cssH+'px';cv.width=Math.round(pxW);cv.height=Math.round(pxH);
+  drawSheet(cv.getContext('2d'),cv.width/W,M);updateStatus();if(map&&VIEW==='map')showCurrentPlot(false)}
+function updateStatus(){const m=M,ch=[];
+  if(!m.bad){ch.push(`<span class="chip">الطاقة <b>${fmtU(m.tot)}</b></span>`,`<span class="chip">رجال <b>${fmtU(m.men)}</b> · نساء <b>${fmtU(m.women)}</b></span>`,
+    `<span class="chip">المصلى <b>${fmtU(m.W,1)}×${fmtU(m.Dm+m.Dw,1)}</b> م</span>`,
+    `<span class="chip ${m.prov>=m.req?'good':'bad'}">المواقف <b>${fmtU(m.prov)}</b> / المطلوب <b>${fmtU(m.req)}</b></span>`,
+    `<span class="chip">التغطية <b>${fmtU(m.cover,1)}٪</b></span>`,`<span class="chip">القبلة <b>${fmtU(m.q,1)}°</b></span>`)}
+  if(!m.bad&&m.land){ch.length=0;ch.push(`<span class="chip">المساحة <b>${fmtU(m.plotArea,2)}</b> م²</span>`,`<span class="chip">المحيط <b>${fmtU(m.perim,2)}</b> م</span>`,`<span class="chip">الأضلاع <b>${m.P.length}</b></span>`)}
+  const w=[...m.warn];if(S.img.show&&S.img.src==='esri'&&TILE_ERR>3&&TILE_OK===0)w.push('الصورة الفضائية لا تُحمّل داخل هذه الصفحة. نزّل البرنامج كملف HTML وافتحه في المتصفح على جهازك، أو ارفع صورة يدوياً من قسم الصورة الجوية.');if(LAY&&LAY.dropped)w.push('بعض عناصر الجدول الجانبي لا تتسع في هذا المقاس. كبّر الورق أو أخفِ عنصراً.');
+  $('#chips').innerHTML=ch.join('')+(w.length?`<div class="warns">${w.map(x=>`<div class="warn">${esc(x)}</div>`).join('')}</div>`:'');
+  $('#qVal').textContent=fmtU(m.q||0,2)+'°';$('#qSum').textContent=fmtU(m.q||0,1)+'°';
+  if(!m.bad){const g=m.geo;$('#refInfo').textContent=S.coordMode==='utm'?`مركز الأرض: ${g.ref.lat.toFixed(6)}، ${g.ref.lon.toFixed(6)}`:`نطاق UTM المستخدم في التصدير: ${g.z} شمال`;
+    m.edges.forEach((e,i)=>{const el=document.getElementById('sm'+i);if(el)el.textContent=`${fmtU(e.len,2)} م · ${e.face}`})}}
+const esc=s=>String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+
+/* ---------- panel bindings ---------- */
+function fillScaleSelect(){$('#scale').innerHTML='<option value="auto">تلقائي</option>'+SCALES.map(s=>`<option value="${s}">1:${s}</option>`).join('')}
+function fillEdgeSelect(){const n=S.verts.length;$('#parkEdge').innerHTML='<option value="-1">أطول ضلع (تلقائي)</option>'+Array.from({length:n},(_,i)=>`<option value="${i}">الضلع ${i+1} (${i+1}→${(i+1)%n+1})</option>`).join('');$('#parkEdge').value=String(S.parkEdge)}
+function renderVerts(){const u=S.coordMode==='utm';$('#thx').textContent=u?'E شرقيات':'X شرق م';$('#thy').textContent=u?'N شماليات':'Y شمال م';
+  $('#vbody').innerHTML=S.verts.map((v,i)=>`<tr><td class="n">${i+1}</td><td><input class="num" type="number" step="any" data-vi="${i}" data-vf="x" value="${v.x}" aria-label="X ${i+1}"></td><td><input class="num" type="number" step="any" data-vi="${i}" data-vf="y" value="${v.y}" aria-label="Y ${i+1}"></td><td><button class="sm" data-del="${i}" aria-label="حذف النقطة ${i+1}">×</button></td></tr>`).join('');
+  $('#localRef').hidden=u;$('#utmRef').hidden=!u;fillEdgeSelect();renderSB()}
+const ROLES=[['front','أمامي (شارع)'],['side','جانبي'],['rear','خلفي'],['none','بدون ارتداد']];
+function renderSB(){const n=S.verts.length;$('#sbody').innerHTML=S.verts.map((v,i)=>`<tr data-edge="${i}"><td><span class="en">${i+1}</span><div class="meta">${i+1}←${(i+1)%n+1}</div></td><td><select data-vi="${i}" data-vf="role" aria-label="وظيفة الضلع ${i+1}">${ROLES.map(([k,t])=>`<option value="${k}"${(v.role||'side')===k?' selected':''}>${t}</option>`).join('')}</select><div class="meta" id="sm${i}"></div></td><td><input class="sb" type="number" step="0.5" min="0" data-vi="${i}" data-vf="sb" value="${v.sb??0}" aria-label="ارتداد الضلع ${i+1}"></td><td><input class="nm" type="text" data-vi="${i}" data-vf="name" value="${esc(v.name||'')}" placeholder="شارع ٣٠م" aria-label="اسم الضلع ${i+1}"></td></tr>`).join('');setupEdgeColorControls()}
+/* per-edge outline colours (rebuilt with the setback table so the count always matches) */
+function setupEdgeColorControls(){const panel=$('#edgeColorsPanel');
+  panel.innerHTML=S.verts.map((v,i)=>`<div class="row"><label>لون الضلع ${i+1}</label><input type="color" data-edgecolor="${i}" value="${(S.edgeColors||[])[i]||S.outlineColor||'#006c73'}"></div>`).join('');
+  $('#outlineColor').value=S.outlineColor||'#006c73'}
+$('#edgeColorsPanel').addEventListener('input',e=>{const el=e.target.closest('[data-edgecolor]');if(!el)return;S.edgeColors=S.edgeColors||[];S.edgeColors[+el.dataset.edgecolor]=el.value;persist();schedule()});
+$('#outlineColor').addEventListener('input',e=>{S.outlineColor=e.target.value;persist();setupEdgeColorControls();schedule()});
+$('#resetEdgeColors').onclick=()=>{S.outlineColor='#006c73';S.edgeColors=[];persist();setupEdgeColorControls();schedule()};
+let HL=-1;
+$('#sbody').addEventListener('focusin',e=>{const tr=e.target.closest('tr');if(!tr)return;HL=+tr.dataset.edge;document.querySelectorAll('#sbody tr').forEach(r=>r.classList.toggle('hl',r===tr));schedule()});
+$('#sbody').addEventListener('focusout',()=>{setTimeout(()=>{if(!$('#sbody').contains(document.activeElement)){HL=-1;document.querySelectorAll('#sbody tr').forEach(r=>r.classList.remove('hl'));schedule()}},0)});
+$('#sbody').addEventListener('mouseover',e=>{const tr=e.target.closest('tr');if(tr&&HL!==+tr.dataset.edge&&!$('#sbody').contains(document.activeElement)){HL=+tr.dataset.edge;schedule()}});
+$('#sbody').addEventListener('mouseleave',()=>{if(!$('#sbody').contains(document.activeElement)){HL=-1;schedule()}});
+const roleSb=r=>r==='none'?0:(+S.sbDef[r]||0);
+$('#applyRoles').onclick=()=>{S.verts.forEach(v=>v.sb=roleSb(v.role||'side'));renderSB();persist();schedule()};
+$('#sbZero').onclick=()=>{S.verts.forEach(v=>v.sb=0);renderSB();persist();schedule()};
+function syncInputs(){document.querySelectorAll('[data-k]').forEach(el=>{const v=getP(S,el.dataset.k);if(el.type==='checkbox')el.checked=!!v;else el.value=v??''});$('#capR').value=S.cap;
+  if(S.sheet.scale!=='auto')$('#scale').value=String(S.sheet.scale);$('#txStripBox').hidden=!S.tx.qrStrip}
+function structural(){S.mosque=null;S.house=null;renderVerts();persist();schedule()}
+$('#side').addEventListener('input',e=>{const el=e.target;
+  if(el.dataset.k){let v;if(el.type==='checkbox')v=el.checked;else if(el.type==='number'||el.type==='range'){v=parseFloat(el.value);if(isNaN(v))return}else v=el.value;
+    if(el.dataset.k==='sheet.scale')v=el.value==='auto'?'auto':+el.value;if(el.dataset.k==='parkEdge'||el.dataset.k==='exp.dpi')v=+el.value;
+    setP(S,el.dataset.k,v);if(el.dataset.k==='cap')$('#capR').value=v;
+    if(el.dataset.k==='coordMode'){convertMode(v);return}
+    if(['cap','womenPct','aPer','hallRatio','sahnRatio','ablPer','minaret','minSide','minSize','housing','housingArea','qAuto','qManual'].includes(el.dataset.k)&&M&&!M.bad){/* keep positions */}
+    if(el.dataset.k==='img.drag')updateModeHint();if(el.dataset.k==='tx.qrStrip')$('#txStripBox').hidden=!v;persist();schedule();return}
+  if(el.id==='capR'){S.cap=+el.value;$('#cap').value=S.cap;persist();schedule();return}
+  if(el.dataset.vi!=null){const i=+el.dataset.vi,f=el.dataset.vf;if(f==='role'){S.verts[i].role=el.value;S.verts[i].sb=roleSb(el.value);const sbi=document.querySelector(`#sbody input[data-vi="${i}"][data-vf="sb"]`);if(sbi)sbi.value=S.verts[i].sb}
+    else S.verts[i][f]=f==='name'?el.value:(parseFloat(el.value)||0);persist();schedule()}});
+$('#vbody').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;if(S.verts.length<=3){toast('الأرض تحتاج ثلاث نقاط على الأقل.');return}S.verts.splice(+b.dataset.del,1);structural()});
+$('#addV').onclick=()=>{const n=S.verts.length,a=S.verts[n-1],b=S.verts[0];S.verts.push({x:+(((+a.x)+(+b.x))/2).toFixed(3),y:+(((+a.y)+(+b.y))/2).toFixed(3),sb:a.sb,role:a.role||'side',name:''});structural()};
+$('#showPaste').onclick=()=>{$('#pasteBox').hidden=!$('#pasteBox').hidden};
+$('#doPaste').onclick=()=>{const pts=[];$('#pasteTxt').value.split(/\n/).forEach(l=>{const nums=(l.match(/-?\d+(?:\.\d+)?/g)||[]).map(Number);if(nums.length>=3)pts.push({x:nums[1],y:nums[2]});else if(nums.length===2)pts.push({x:nums[0],y:nums[1]})});
+  if(pts.length<3){toast('لم أجد ثلاث نقاط على الأقل. اكتب X وY في كل سطر.');return}S.verts=pts.map(p=>({x:p.x,y:p.y,sb:roleSb('side'),role:'side',name:''}));
+  if(pts[0].x>100000&&S.coordMode!=='utm'){S.coordMode='utm';S.zone=autoZone(+S.refLon||45);$('#coordMode').value='utm';$('#zone').value=S.zone;toast('الأرقام تبدو إحداثيات UTM، فحوّلت النظام إلى UTM.')}
+  $('#pasteBox').hidden=true;structural()};
+$('#genRect').onclick=()=>{const L=+$('#gL').value,W=+$('#gW').value,B=+$('#gB').value;if(!(L>0&&W>0))return;const r=rectVerts(L,W,B),old=S.verts;
+  let pts=r;if(S.coordMode==='utm'){const g=buildGeo(),ctr=centroid(g.L);pts=r.map(p=>{const u=toUTM(g,add(p,ctr));return{x:+u.x.toFixed(3),y:+u.y.toFixed(3)}})}
+  S.verts=pts.map((p,i)=>({x:p.x,y:p.y,sb:old[i]?.sb??roleSb('side'),role:old[i]?.role||'side',name:old[i]?.name||''}));structural()};
+function convertMode(to){const prev=to==='utm'?'local':'utm';S.coordMode=prev;const g=buildGeo();
+  if(to==='utm'){const z=autoZone(g.ref.lon);S.zone=z;g.z=z;S.verts=S.verts.map((v,i)=>{const u=toUTM(g,g.L[i]);return{...v,x:+u.x.toFixed(3),y:+u.y.toFixed(3)}})}
+  else{S.refLat=+g.ref.lat.toFixed(6);S.refLon=+g.ref.lon.toFixed(6);S.verts=S.verts.map((v,i)=>({...v,x:+g.L[i].x.toFixed(3),y:+g.L[i].y.toFixed(3)}));
+    if(S.mosque){/* local positions stay valid: same ref */}}
+  S.coordMode=to;const g2=buildGeo(),mp=p=>p&&g2.F.fromLL(g.F.toLL(p));
+  if(S.mosque)S.mosque=mp(S.mosque);if(S.house)S.house=mp(S.house);const ic=mp({x:+S.img.cx||0,y:+S.img.cy||0});S.img.cx=+ic.x.toFixed(2);S.img.cy=+ic.y.toFixed(2);
+  syncInputs();renderVerts();persist();schedule()}
+$('#autoBtn').onclick=()=>{S.mosque=null;S.house=null;persist();schedule()};
+$('#alignBtn').onclick=()=>{if(!M||M.bad)return;const e=M.edges.reduce((a,b)=>b.len>a.len?b:a);let ang=-Math.atan2(e.b.y-e.a.y,e.b.x-e.a.x)*R2D;ang=((ang+90)%180+180)%180-90;S.sheet.vr=Math.round(ang*10)/10;S.sheet.panX=0;S.sheet.panY=0;syncInputs();persist();schedule()};
+$('#northBtn').onclick=()=>{S.sheet.vr=0;syncInputs();persist();schedule()};
+$('#centerBtn').onclick=()=>{S.sheet.panX=0;S.sheet.panY=0;persist();schedule()};
+$('#resetBtn').onclick=()=>{S=defaults();IMG=null;IMGDATA=null;try{localStorage.removeItem(STORE_IMG)}catch(e){}clearTxPhoto();syncInputs();renderVerts();applyProjType();persist();schedule()};
+function updateModeHint(){$('#modeHint').textContent=S.img.drag?'وضع سحب الصورة الجوية: اسحب لتطابق الصورة حدود الأرض.':'اسحب المسجد أو السكن لتحريكه، واسحب الفراغ لتحريك الرسم داخل اللوحة.'}
+
+/* zoom */
+$('#zIn').onclick=()=>{zoom=Math.min(6,zoom*1.4);render()};$('#zOut').onclick=()=>{zoom=Math.max(1,zoom/1.4);render()};$('#zFit').onclick=()=>{zoom=1;render()};
+new ResizeObserver(()=>schedule()).observe(desk);
+
+/* dragging on the sheet */
+let drag=null;
+function evPaper(e){const r=cv.getBoundingClientRect(),{W,H}=paperDims();return{x:(e.clientX-r.left)/r.width*W,y:(e.clientY-r.top)/r.height*H}}
+cv.addEventListener('pointerdown',e=>{if(!M||M.bad||!PT)return;const q=evPaper(e),w=p2w(q),d=LAY.draw;
+  if(q.x<d.x||q.x>d.x+d.w||q.y<d.y||q.y>d.y+d.h)return;
+  let kind='pan';if(S.img.drag&&IMG&&S.img.src==='upload')kind='img';else if(inPoly(w,M.g.outer))kind='mosque';else if(M.h&&inPoly(w,M.h.poly))kind='house';
+  drag={kind,q0:q,w0:w,start:kind==='mosque'?{...S.mosque}:kind==='house'?{...S.house}:kind==='img'?{x:+S.img.cx,y:+S.img.cy}:{x:+S.sheet.panX,y:+S.sheet.panY}};
+  cv.setPointerCapture(e.pointerId);cv.classList.add('dragging')});
+cv.addEventListener('pointermove',e=>{if(!drag)return;const q=evPaper(e);
+  if(drag.kind==='pan'){S.sheet.panX=+(drag.start.x+q.x-drag.q0.x).toFixed(2);S.sheet.panY=+(drag.start.y+q.y-drag.q0.y).toFixed(2)}
+  else{const PTs=PT;const w=p2w(q),dx=w.x-drag.w0.x,dy=w.y-drag.w0.y,np={x:+(drag.start.x+dx).toFixed(2),y:+(drag.start.y+dy).toFixed(2)};
+    if(drag.kind==='mosque')S.mosque=np;else if(drag.kind==='house')S.house=np;else{S.img.cx=np.x;S.img.cy=np.y;$('#imgX').value=np.x;$('#imgY').value=np.y}PT=PTs}
+  schedule()});
+const endDrag=()=>{if(drag){drag=null;cv.classList.remove('dragging');persist()}};
+cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+
+/* aerial image */
+function loadImage(dataUrl,fresh){const im=new Image();im.onload=()=>{IMG=im;IMGDATA=dataUrl;
+  if(fresh)S.img.src='upload';
+  if(fresh&&M&&!M.bad){const bb=bbox(M.P),ctr=centroid(M.P);S.img.cx=+ctr.x.toFixed(2);S.img.cy=+ctr.y.toFixed(2);if(!(+S.img.widthM>0))S.img.widthM=Math.round((bb.x1-bb.x0)*1.6);S.img.rot=0;S.img.show=true;syncInputs()}
+  try{localStorage.setItem(STORE_IMG,dataUrl)}catch(e){if(fresh)toast('الصورة كبيرة على الحفظ في المتصفح؛ ستبقى حتى تغلق الصفحة.')}persist();schedule()};
+  im.onerror=()=>toast('تعذّر قراءة الصورة. جرّب PNG أو JPG.');im.src=dataUrl}
+function readFile(f){if(!f||!f.type.startsWith('image/')){toast('اختر ملف صورة (PNG أو JPG).');return}const r=new FileReader();r.onload=()=>loadImage(r.result,true);r.readAsDataURL(f)}
+const drop=$('#drop');drop.onclick=()=>$('#imgFile').click();drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#imgFile').click()}};
+$('#imgFile').onchange=e=>readFile(e.target.files[0]);
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('on')});drop.addEventListener('dragleave',()=>drop.classList.remove('on'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('on');readFile(e.dataTransfer.files[0])});
+document.addEventListener('paste',e=>{const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(it){readFile(it.getAsFile());toast('أُضيفت الصورة الملصقة كصورة جوية.')}});
+$('#imgClear').onclick=()=>{IMG=null;IMGDATA=null;S.img.src='esri';syncInputs();persist();try{localStorage.removeItem(STORE_IMG)}catch(e){}schedule()};
+
+/* ---------- downloads ---------- */
+let DL=null;
+const IN_CLAUDE=!!(window.claude&&window.claude.use);
+(async()=>{try{DL=IN_CLAUDE?await window.claude.use('downloads'):null}catch(e){DL=null}$('#dlNote').hidden=!!DL||!IN_CLAUDE})();
+async function saveFile(name,data){
+  if(!DL&&!IN_CLAUDE){const blob=data instanceof Blob?data:new Blob([data]),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast('تم تنزيل '+name);return}
+  if(!DL){toast('حفظ الملفات غير متاح في هذا العرض.');return}
+  try{await DL.save({filename:name,data});toast('تم حفظ '+name)}catch(e){const code=e&&e.code;
+    if(code==='declined')toast('أُلغي الحفظ.');else if(code==='rate_limited')toast('هناك نافذة حفظ مفتوحة بالفعل. أكمِلها ثم أعد المحاولة.');else if(code==='too_large')toast('الملف كبير جداً. اختر دقة أقل.');else toast('تعذّر الحفظ: '+(e&&e.message||code||''))}}
+function baseName(){return(String(S.tb.project||'mosque-site').replace(/[\\/:*?"<>|()]+/g,' ').trim().replace(/\s+/g,'-')||'mosque-site')+(S.tb.no?'_'+S.tb.no:'')}
+async function waitTiles(list,ms=30000){if(!list.length)return;toast('جارٍ تحميل الصورة الفضائية…');await Promise.race([Promise.all(list),new Promise(r=>setTimeout(r,ms))])}
+async function renderExportCanvas(){const{W,H}=paperDims();let ppm=(+S.exp.dpi||200)/25.4;const cap=24e6;if(W*H*ppm*ppm>cap)ppm=Math.sqrt(cap/(W*H));
+  const cvx=document.createElement('canvas');cvx.width=Math.round(W*ppm);cvx.height=Math.round(H*ppm);const ctx=cvx.getContext('2d'),savedPT=PT,savedL=LAY;
+  TILE_WAIT=[];drawSheet(ctx,cvx.width/W,M);const wl=TILE_WAIT;TILE_WAIT=null;
+  if(wl.length){await waitTiles(wl);drawSheet(ctx,cvx.width/W,M)}PT=savedPT;LAY=savedL;return{cvx,W,H,dpi:Math.round(ppm*25.4)}}
+/* georeferenced satellite mosaic around the plot (north-up, local metres) */
+async function esriMosaic(m){const bb=bbox(m.P),mg=Math.max(60,Math.max(bb.x1-bb.x0,bb.y1-bb.y0)*0.35),x0=bb.x0-mg,x1=bb.x1+mg,y0=bb.y0-mg,y1=bb.y1+mg,wM=x1-x0,hM=y1-y0,F=m.geo.F;
+  const cs=[{x:x0,y:y0},{x:x1,y:y0},{x:x0,y:y1},{x:x1,y:y1}].map(p=>F.toLL(p));
+  let ppmM=4;while(wM*ppmM>6000||hM*ppmM>6000)ppmM/=1.25;
+  const r=tileRange(m.geo.ref.lat,cs.map(a=>a.lat),cs.map(a=>a.lon),ppmM,600);const res=156543.034*Math.cos(m.geo.ref.lat*D2R)/2**r.z;ppmM=Math.min(ppmM,1/res);
+  const iw=Math.round(wM*ppmM),ih=Math.round(hM*ppmM),cvx=document.createElement('canvas');cvx.width=iw;cvx.height=ih;
+  TILE_WAIT=[];const pc=c;c=cvx.getContext('2d');const toPx=p=>({x:(p.x-x0)*ppmM,y:(y1-p.y)*ppmM});paintTiles(r,F,toPx);const wl=TILE_WAIT;TILE_WAIT=null;
+  if(wl.length){await waitTiles(wl);paintTiles(r,F,toPx)}c=pc;
+  const anyOk=[...TILES.values()].some(t=>t.ok);if(!anyOk)return null;
+  const blob=await new Promise(res2=>cvx.toBlob(res2,'image/jpeg',0.9));return{blob,ctr:{x:(x0+x1)/2,y:(y0+y1)/2},wM,rot:0,iw,ih}}
+$('#xPdf').onclick=async()=>{if(!window.jspdf){toast('مكتبة PDF لم تُحمَّل بعد.');return}toast('جارٍ تجهيز اللوحة…');await new Promise(r=>setTimeout(r,30));
+  const{cvx,W,H,dpi}=await renderExportCanvas();const pdf=new window.jspdf.jsPDF({orientation:W>=H?'landscape':'portrait',unit:'mm',format:[Math.min(W,H),Math.max(W,H)],compress:true});
+  pdf.setProperties({title:S.tb.title||'',subject:S.tb.project||'',creator:S.tb.office||''});pdf.addImage(cvx.toDataURL('image/jpeg',0.92),'JPEG',0,0,W,H,undefined,'FAST');
+  await saveFile(baseName()+'_'+S.sheet.paper+'.pdf',pdf.output('blob'));if(dpi<(+S.exp.dpi))toast(`حُفظت اللوحة بدقة ${dpi} dpi (الحد الأقصى لهذا المقاس).`)};
+$('#xPng').onclick=async()=>{toast('جارٍ تجهيز الصورة…');await new Promise(r=>setTimeout(r,30));const{cvx}=await renderExportCanvas();cvx.toBlob(b=>saveFile(baseName()+'_'+S.sheet.paper+'.png',b),'image/png')};
+
+/* DXF (R12, metres) */
+function dxfStr(s){return String(s).replace(/°/g,'%%d').replace(/[^\x00-\x7f]/g,ch=>'\\U+'+ch.codePointAt(0).toString(16).toUpperCase().padStart(4,'0'))}
+function buildDXF(m){const g=m.geo,X=p=>S.exp.coords==='utm'?toUTM(g,p):{x:p.x,y:p.y},out=[],G=(a,b)=>out.push(String(a),String(b)),ar=S.exp.dxfLang!=='en';
+  const L2=k=>ar?LBL[k][0]:LBL[k][1],f=v=>(+v).toFixed(4);
+  const layers=[['PLOT',7,'CONTINUOUS'],['SETBACK',1,'DASHED'],['HALL',5,'CONTINUOUS'],['WOMEN',6,'CONTINUOUS'],['SAHN',2,'CONTINUOUS'],['ABLUTION',8,'CONTINUOUS'],['MINARET',30,'CONTINUOUS'],['HOUSING',4,'CONTINUOUS'],['PARKING',9,'CONTINUOUS'],['QIBLA',40,'CONTINUOUS'],['TEXT',7,'CONTINUOUS'],['DIMS',3,'CONTINUOUS']];
+  G(0,'SECTION');G(2,'HEADER');G(9,'$ACADVER');G(1,'AC1009');G(9,'$INSUNITS');G(70,6);G(9,'$TEXTSTYLE');G(7,'ARABIC');G(0,'ENDSEC');
+  G(0,'SECTION');G(2,'TABLES');
+  G(0,'TABLE');G(2,'LTYPE');G(70,2);G(0,'LTYPE');G(2,'CONTINUOUS');G(70,0);G(3,'Solid line');G(72,65);G(73,0);G(40,'0.0');
+  G(0,'LTYPE');G(2,'DASHED');G(70,0);G(3,'__ __ __');G(72,65);G(73,2);G(40,'3.0');G(49,'2.0');G(49,'-1.0');G(0,'ENDTAB');
+  G(0,'TABLE');G(2,'LAYER');G(70,layers.length);layers.forEach(([n,col,lt])=>{G(0,'LAYER');G(2,n);G(70,0);G(62,col);G(6,lt)});G(0,'ENDTAB');
+  G(0,'TABLE');G(2,'STYLE');G(70,1);G(0,'STYLE');G(2,'ARABIC');G(70,0);G(40,'0.0');G(41,'1.0');G(50,'0.0');G(71,0);G(42,'2.5');G(3,'arial.ttf');G(4,'');G(0,'ENDTAB');
+  G(0,'ENDSEC');G(0,'SECTION');G(2,'ENTITIES');
+  const pl=(pts,layer)=>{G(0,'POLYLINE');G(8,layer);G(66,1);G(10,'0.0');G(20,'0.0');G(30,'0.0');G(70,1);pts.forEach(p=>{const q=X(p);G(0,'VERTEX');G(8,layer);G(10,f(q.x));G(20,f(q.y));G(30,'0.0')});G(0,'SEQEND');G(8,layer)};
+  const tx=(s,p,h,layer='TEXT',rot=0)=>{const q=X(p);G(0,'TEXT');G(8,layer);G(10,f(q.x));G(20,f(q.y));G(30,'0.0');G(40,h.toFixed(3));G(1,dxfStr(s));G(50,rot.toFixed(3));G(7,'ARABIC');G(72,4);G(11,f(q.x));G(21,f(q.y));G(31,'0.0')};
+  pl(m.P,'PLOT');if(m.bOk&&m.hasSb)pl(m.B,'SETBACK');
+  const parts=[...m.g.parts];if(m.h)parts.push(m.h);parts.forEach(p=>pl(p.poly,LAYER[p.k]));m.stalls.forEach(q=>pl(q,'PARKING'));
+  const th=clamp(Math.sqrt(m.plotArea)/90,0.8,4);
+  parts.forEach(p=>{if(p.k==='mihrab')return;const cc=centroid(p.poly);tx(L2(p.k),cc,p.k==='minaret'?th*0.5:th);if(p.area&&p.k!=='minaret')tx((ar?'':'')+Math.round(p.area)+(ar?' م²':' m2'),add(cc,{x:0,y:-th*1.6}),th*0.7)});
+  m.edges.forEach((e,i)=>{const a=X(e.a),b=X(e.b);let ang=Math.atan2(b.y-a.y,b.x-a.x)*R2D;if(ang>90)ang-=180;if(ang<=-90)ang+=180;
+    const mid=add(mul(add(e.a,e.b),0.5),mul(e.nOut,th*1.8));tx((e.name?e.name+' - ':'')+e.len.toFixed(2)+(ar?' م':' m'),mid,th*0.8,'DIMS',ang);
+    const vp=add(e.a,mul(add(e.nOut,m.edges[(i-1+m.P.length)%m.P.length].nOut),th*1.2));tx(String(i+1),vp,th*0.8,'DIMS')});
+  if(!m.land){const qa=add(S.mosque,mul(m.vh,2.5)),qb=add(S.mosque,mul(m.vh,2.5+Math.max(20,m.D*0.5))),A1=X(qa),B1=X(qb);
+  G(0,'LINE');G(8,'QIBLA');G(10,f(A1.x));G(20,f(A1.y));G(30,'0.0');G(11,f(B1.x));G(21,f(B1.y));G(31,'0.0');
+  tx((ar?'القبلة ':'QIBLA ')+m.q.toFixed(2)+'°',add(qb,mul(m.vh,th*1.5)),th*0.8,'QIBLA');
+  const bb=bbox(m.P);tx((ar?'المواقف: ':'PARKING: ')+m.prov+(ar?' (المطلوب ':' (REQ. ')+m.req+')',{x:(bb.x0+bb.x1)/2,y:bb.y0-th*5},th,'TEXT')}
+  else{const bb=bbox(m.P);tx((ar?'مساحة الأرض: ':'PLOT AREA: ')+m.plotArea.toFixed(2)+(ar?' م²':' m2'),{x:(bb.x0+bb.x1)/2,y:bb.y0-th*4},th,'TEXT')}
+  G(0,'ENDSEC');G(0,'EOF');return out.join('\r\n')+'\r\n'}
+function worldFile(exportFn,o){const w=o.wM,iw=o.iw,ih=o.ih,h=w*ih/iw,th=(o.rot||0)*D2R,ctr=o.ctr;
+  const cu={x:Math.cos(th),y:Math.sin(th)},rd={x:Math.sin(th),y:-Math.cos(th)};
+  const UL=add(ctr,add(mul(cu,-w/2),mul(rd,-h/2))),UR=add(UL,mul(cu,w)),LL=add(UL,mul(rd,h));
+  const ul=exportFn(UL),ur=exportFn(UR),ll=exportFn(LL),col={x:(ur.x-ul.x)/iw,y:(ur.y-ul.y)/iw},row={x:(ll.x-ul.x)/ih,y:(ll.y-ul.y)/ih};
+  const C=ul.x+col.x/2+row.x/2,F=ul.y+col.y/2+row.y/2;
+  return{txt:[col.x,col.y,row.x,row.y,C,F].map(v=>v.toFixed(10)).join('\r\n')+'\r\n',ll,rotDeg:Math.atan2(ur.y-ul.y,ur.x-ul.x)*R2D,widthUnits:Math.hypot(ur.x-ul.x,ur.y-ul.y)}}
+async function aerialForExport(){if(S.img.src==='upload'&&IMG&&IMGDATA){const{mime,arr}=dataUrlParts(IMGDATA);
+    return{data:arr,ext:mime.includes('jpeg')||mime.includes('jpg')?'jpg':'png',ctr:{x:+S.img.cx||0,y:+S.img.cy||0},wM:Math.max(1,+S.img.widthM||1),rot:+S.img.rot||0,iw:IMG.naturalWidth,ih:IMG.naturalHeight}}
+  if(S.img.src==='esri'){const mo=await esriMosaic(M);if(mo&&mo.blob)return{...mo,data:mo.blob,ext:'jpg'};toast('تعذّر تحميل الصورة الفضائية؛ صُدّر الملف بدونها.')}return null}
+function dataUrlParts(u){const[h,b]=u.split(',');const mime=(h.match(/data:([^;]+)/)||[])[1]||'image/png';const bin=atob(b),arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return{mime,arr}}
+$('#xDxf').onclick=async()=>{if(!window.JSZip){toast('مكتبة الضغط لم تُحمَّل بعد.');return}if(!M||M.bad)return;const zip=new JSZip(),bn=baseName();
+  zip.file(bn+'.dxf',buildDXF(M));const g=M.geo,utm=S.exp.coords==='utm',ex=p=>utm?toUTM(g,p):{x:p.x,y:p.y};
+  let rd='﻿ملف المخطط: '+bn+'.dxf\r\nالوحدات: متر. صيغة DXF R12 تفتح في كل إصدارات AutoCAD.\r\n'+(utm?`الإحداثيات: WGS 84 / UTM نطاق ${g.z} شمال (EPSG:${32600+g.z}).\r\n`:'الإحداثيات: محلية بالمتر حول النقطة المرجعية.\r\n')+
+    'الطبقات: PLOT حدود الأرض، SETBACK خط الارتداد، HALL/WOMEN/SAHN/ABLUTION/MINARET/HOUSING الكتل، PARKING المواقف، QIBLA اتجاه القبلة، DIMS الأطوال.\r\n';
+  const aer=await aerialForExport();
+  if(aer){const ext=aer.ext,wf=worldFile(ex,aer);
+    zip.file('aerial.'+ext,aer.data);zip.file('aerial.'+(ext==='jpg'?'jgw':'pgw'),wf.txt);if(utm)zip.file('aerial.prj',prjWKT(g.z));
+    rd+=`\r\nالصورة الجوية: aerial.${ext} ومعها ملف الإسناد (World file).\r\nفي AutoCAD العادي: أمر IMAGEATTACH ثم أدخل:\r\n  نقطة الإدراج (الركن السفلي الأيسر): ${wf.ll.x.toFixed(3)}, ${wf.ll.y.toFixed(3)}\r\n  المقياس: ${wf.widthUnits.toFixed(3)}\r\n  الدوران: ${wf.rotDeg.toFixed(4)}\r\nفي Civil 3D / Map 3D استخدم MAPIINSERT وسيقرأ ملف الإسناد تلقائياً.\r\n`}
+  zip.file('اقرأني.txt',rd);await saveFile(bn+'_CAD.zip',await zip.generateAsync({type:'blob',compression:'DEFLATE'}))};
+
+/* Shapefile + KML + GeoJSON */
+function features(m){const fs=[];const add2=(k,poly,attrs)=>fs.push({k,poly,attrs});
+  add2('plot',m.P,{NAME:'حدود الأرض',CATEGORY:'PLOT',AREA_M2:m.plotArea,CAPACITY:0});if(m.bOk&&m.hasSb)add2('setback',m.B,{NAME:'المساحة داخل الارتدادات',CATEGORY:'BUILDABLE',AREA_M2:m.bArea,CAPACITY:0});
+  const parts=[...m.g.parts];if(m.h)parts.push(m.h);parts.forEach(p=>add2(p.k,p.poly,{NAME:LBL[p.k][0],CATEGORY:LAYER[p.k],AREA_M2:p.area||Math.abs(polyArea(p.poly)),CAPACITY:p.cap||0}));
+  m.stalls.forEach((q,i)=>add2('park',q,{NAME:'موقف '+(i+1),CATEGORY:'PARKING',AREA_M2:Math.abs(polyArea(q)),CAPACITY:0}));return fs}
+function buildSHP(rings){const n=rings.length,rs=rings.map(r=>{const p=r.slice();if(polyArea(p)>0)p.reverse();p.push({...p[0]});return p});
+  const total=100+rs.reduce((s,p)=>s+8+48+16*p.length,0),shp=new DataView(new ArrayBuffer(total)),shx=new DataView(new ArrayBuffer(100+8*n));
+  const all=bbox(rs.flat());const hdr=(dv,len)=>{dv.setInt32(0,9994,false);dv.setInt32(24,len/2,false);dv.setInt32(28,1000,true);dv.setInt32(32,5,true);
+    dv.setFloat64(36,all.x0,true);dv.setFloat64(44,all.y0,true);dv.setFloat64(52,all.x1,true);dv.setFloat64(60,all.y1,true)};
+  hdr(shp,total);hdr(shx,100+8*n);let off=100;
+  rs.forEach((p,i)=>{const cl=48+16*p.length,b=bbox(p);shx.setInt32(100+i*8,off/2,false);shx.setInt32(104+i*8,cl/2,false);shp.setInt32(off,i+1,false);shp.setInt32(off+4,cl/2,false);
+    const o=off+8;shp.setInt32(o,5,true);shp.setFloat64(o+4,b.x0,true);shp.setFloat64(o+12,b.y0,true);shp.setFloat64(o+20,b.x1,true);shp.setFloat64(o+28,b.y1,true);
+    shp.setInt32(o+36,1,true);shp.setInt32(o+40,p.length,true);shp.setInt32(o+44,0,true);let po=o+48;p.forEach(q=>{shp.setFloat64(po,q.x,true);shp.setFloat64(po+8,q.y,true);po+=16});off+=8+cl});
+  return{shp:shp.buffer,shx:shx.buffer}}
+function truncUtf8(b,n){if(b.length<=n)return b;let e=n;while(e>0&&(b[e]&0xC0)===0x80)e--;return b.slice(0,e)}
+function buildDBF(fields,rows){const enc=new TextEncoder(),recLen=1+fields.reduce((s,f)=>s+f.len,0),hdrLen=32+32*fields.length+1,buf=new Uint8Array(hdrLen+recLen*rows.length+1),dv=new DataView(buf.buffer),d=new Date();
+  buf[0]=3;buf[1]=d.getFullYear()-1900;buf[2]=d.getMonth()+1;buf[3]=d.getDate();dv.setUint32(4,rows.length,true);dv.setUint16(8,hdrLen,true);dv.setUint16(10,recLen,true);
+  fields.forEach((f,i)=>{const o=32+i*32;for(let k=0;k<f.name.length;k++)buf[o+k]=f.name.charCodeAt(k);buf[o+11]=f.type.charCodeAt(0);buf[o+16]=f.len;buf[o+17]=f.dec||0});
+  buf[hdrLen-1]=0x0D;let o=hdrLen;
+  rows.forEach(r=>{buf[o++]=0x20;fields.forEach(f=>{const v=r[f.name];if(f.type==='C'){const b=truncUtf8(enc.encode(String(v??'')),f.len);buf.set(b,o);for(let k=b.length;k<f.len;k++)buf[o+k]=0x20}
+    else{let s=(v==null||isNaN(v))?'':Number(v).toFixed(f.dec||0);s=s.slice(-f.len).padStart(f.len,' ');for(let k=0;k<f.len;k++)buf[o+k]=s.charCodeAt(k)}o+=f.len})});
+  buf[o]=0x1A;return buf}
+function prjWKT(z){return`PROJCS["WGS_1984_UTM_Zone_${z}N",GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]],PROJECTION["Transverse_Mercator"],PARAMETER["False_Easting",500000.0],PARAMETER["False_Northing",0.0],PARAMETER["Central_Meridian",${cmer(z)}.0],PARAMETER["Scale_Factor",0.9996],PARAMETER["Latitude_Of_Origin",0.0],UNIT["Meter",1.0]]`}
+function kmlColor(hex,a){const h=hex.replace('#','');return a+h.slice(4,6)+h.slice(2,4)+h.slice(0,2)}
+function buildKML(m,fs){const g=m.geo,styles={plot:['#1a1a1a','00',3],setback:['#c62f26','00',2],park:[COL.park.s,'b0',1]};
+  Object.keys(COL).forEach(k=>{if(COL[k].f&&!styles[k])styles[k]=[COL[k].f,'d0',1]});styles.park=[COL.park.f,'b0',1];
+  const st=Object.entries(styles).map(([k,[c2,a,w]])=>`<Style id="${k}"><LineStyle><color>${kmlColor(k==='plot'||k==='setback'?c2:(COL[k]?.s||c2),'ff')}</color><width>${w}</width></LineStyle><PolyStyle><color>${kmlColor(c2,a)}</color>${a==='00'?'<fill>0</fill>':''}</PolyStyle></Style>`).join('');
+  const pm=f=>`<Placemark><name>${esc(f.attrs.NAME)}</name><styleUrl>#${f.k}</styleUrl><description>${esc(f.attrs.CATEGORY)} — ${Math.round(f.attrs.AREA_M2)} m²</description><Polygon><tessellate>1</tessellate><outerBoundaryIs><LinearRing><coordinates>${[...f.poly,f.poly[0]].map(p=>{const ll=toLL(g,p);return ll.lon.toFixed(8)+','+ll.lat.toFixed(8)+',0'}).join(' ')}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>`;
+  const main=fs.filter(f=>f.k!=='park').map(pm).join(''),parks=fs.filter(f=>f.k==='park').map(pm).join('');
+  const qa=m.land?null:toLL(g,add(S.mosque,mul(m.vh,2.5))),qb=m.land?null:toLL(g,add(S.mosque,mul(m.vh,60)));
+  return`<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${esc(S.tb.project||'مخطط المسجد')}</name>${st}<Style id="q"><LineStyle><color>ff22a0e0</color><width>3</width></LineStyle></Style>${main}${m.land?'':`<Folder><name>المواقف (${m.prov})</name>${parks}</Folder><Placemark><name>اتجاه القبلة ${m.q.toFixed(2)}°</name><styleUrl>#q</styleUrl><LineString><coordinates>${qa.lon.toFixed(8)},${qa.lat.toFixed(8)},0 ${qb.lon.toFixed(8)},${qb.lat.toFixed(8)},0</coordinates></LineString></Placemark>`}</Document></kml>`}
+$('#xShp').onclick=async()=>{if(!window.JSZip){toast('مكتبة الضغط لم تُحمَّل بعد.');return}if(!M||M.bad)return;const zip=new JSZip(),bn=baseName(),g=M.geo,fs=features(M);
+  const{shp,shx}=buildSHP(fs.map(f=>f.poly.map(p=>toUTM(g,p))));
+  const dbf=buildDBF([{name:'NAME',type:'C',len:80},{name:'CATEGORY',type:'C',len:20},{name:'AREA_M2',type:'N',len:14,dec:2},{name:'CAPACITY',type:'N',len:8,dec:0}],fs.map(f=>f.attrs));
+  const sn=bn+'_site';zip.file(sn+'.shp',shp);zip.file(sn+'.shx',shx);zip.file(sn+'.dbf',dbf);zip.file(sn+'.prj',prjWKT(g.z));zip.file(sn+'.cpg','UTF-8');
+  zip.file(bn+'.kml',buildKML(M,fs));
+  const aer=await aerialForExport();if(aer){const wf=worldFile(p=>toUTM(g,p),aer);zip.file('aerial.'+aer.ext,aer.data);zip.file('aerial.'+(aer.ext==='jpg'?'jgw':'pgw'),wf.txt);zip.file('aerial.prj',prjWKT(g.z))}
+  zip.file(bn+'.geojson',JSON.stringify({type:'FeatureCollection',features:fs.map(f=>({type:'Feature',properties:f.attrs,geometry:{type:'Polygon',coordinates:[[...f.poly,f.poly[0]].map(p=>{const ll=toLL(g,p);return[+ll.lon.toFixed(8),+ll.lat.toFixed(8)]})]}}))}));
+  await saveFile(bn+'_GIS.zip',await zip.generateAsync({type:'blob',compression:'DEFLATE'}))};
+
+/* ---------- buildable area after setbacks (PNG diagram) ---------- */
+const BLD={band:'#f3eee0',edge:'#9a9a9a',fill:'#7b9a88',fillS:'#6a8877',title:'#2d5b45',titleBg:'#efefed',bar:'#dccaa6',ink:'#1f2421',sb:'#666666',muted:'#6f6f6f'};
+// strip of each edge (inward, width = its setback) + mitre wedge at each vertex, same corner rule as offsetPoly
+function setbackStrips(m){const P=m.P,n=P.length,E=m.edges,out=[];
+  const ln=E.map(e=>{const d=mul(sub(e.b,e.a),1/e.len),nin=mul(e.nOut,-1);return{d,nin,p:add(e.a,mul(nin,e.sb))}});
+  E.forEach((e,i)=>{if(e.sb>0){const o=mul(ln[i].nin,e.sb);out.push([e.a,e.b,add(e.b,o),add(e.a,o)])}});
+  for(let i=0;i<n;i++){const j=(i-1+n)%n,A=ln[j],B=ln[i],sa=E[j].sb,sb=E[i].sb;if(!(sa>0||sb>0))continue;
+    const v=P[i],pa=add(v,mul(A.nin,sa)),pb=add(v,mul(B.nin,sb)),cr=cross(A.d,B.d);if(Math.abs(cr)<1e-9)continue;
+    const X=add(A.p,mul(A.d,cross(sub(B.p,A.p),B.d)/cr)),reflex=cr*m.sign<0;
+    const w=reflex&&Math.hypot(X.x-v.x,X.y-v.y)>4*Math.max(sa,sb)?[v,pa,pb]:[v,pa,X,pb];
+    out.push(w.filter((p,k)=>k===0||(Math.hypot(p.x-w[k-1].x,p.y-w[k-1].y)>1e-9&&Math.hypot(p.x-v.x,p.y-v.y)>1e-9)))}
+  return out.filter(q=>q.length>=3&&Math.abs(polyArea(q))>1e-6)}
+function buildableGeom(m){const R=q=>[q.map(p=>[p.x,p.y])],strips=setbackStrips(m);let parts=null,method='clip';
+  if(window.polygonClipping){try{const res=strips.length?polygonClipping.difference(R(m.P),...strips.map(R)):[R(m.P)];
+    parts=res.map(pg=>pg.map(r=>cleanRing(r.map(([x,y])=>({x,y}))))).filter(pg=>pg[0].length>=3&&Math.abs(polyArea(pg[0]))>0.01)}catch(e){parts=null}}
+  if(!parts){method='offset';parts=m.bOk?[[m.B]]:(m.hasSb?[]:[[m.P]])}
+  const ar=pg=>Math.abs(polyArea(pg[0]))-pg.slice(1).reduce((s,h)=>s+Math.abs(polyArea(h)),0);
+  parts=parts.map(pg=>({rings:pg,area:ar(pg)})).sort((a,b)=>b.area-a.area);
+  return{parts,area:parts.reduce((s,p)=>s+p.area,0),method}}
+function bldTitle(m){if(String(S.bld.title||'').trim())return S.bld.title.trim();
+  const fr=m.edges.filter((e,i)=>e.name&&(S.verts[i].role||'side')==='front').map(e=>e.name.trim()),all=fr.length?fr:m.edges.map(e=>e.name.trim()).filter(Boolean);
+  return[...new Set(all)].join(' – ')||S.tb.location||S.tb.project||'المساحة القابلة للبناء'}
+function bldRegRatio(){const s=String(S.bld.maxRatio??'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[٫,]/,'.').replace(/[%٪\s]/g,'');const v=parseFloat(s);return isFinite(v)&&v>0?v:null}
+const bNum=v=>{const r=Math.round(v*100)/100;return fmt(r,r%1?(Math.round(r*10)/10===r?1:2):0)};
+const bPct=v=>fmt(v,v<10&&v%1?1:0)+(S.sheet.digits==='arab'?'٪':'%');
+function distSeg(p,a,b){const d=sub(b,a),l2=dot(d,d)||1,t=clamp(dot(sub(p,a),d)/l2,0,1);return Math.hypot(p.x-a.x-d.x*t,p.y-a.y-d.y*t)}
+
+// diagram rotation: street (front) edge on top under the title, as in the reference; else the sheet rotation
+function bldRotation(m){const fi=m.edges.map((e,i)=>i).filter(i=>(S.verts[i].role||'side')==='front');
+  const pool=fi.length?fi:m.edges.map((e,i)=>i).filter(i=>m.edges[i].name);if(!pool.length)return(+S.sheet.vr||0)*D2R;
+  const e=m.edges[pool.reduce((a,b)=>m.edges[b].len>m.edges[a].len?b:a)];return Math.PI/2-Math.atan2(e.nOut.y,e.nOut.x)}
+function drawBuildable(m,geo){
+  const vr=bldRotation(m),bb=bbox(m.P.map(p=>rotV(p,vr))),bw=Math.max(1,bb.x1-bb.x0),bh=Math.max(1,bb.y1-bb.y0);
+  const sbs=m.edges.map(e=>e.sb).filter(v=>v>0),minSb=sbs.length?Math.min(...sbs):0;
+  let k=Math.min(640/bw,560/bh);if(minSb)k=Math.max(k,Math.min(17/minSb,1400/Math.max(bw,bh)));   // px per metre, true proportions
+  const rc={x:(bb.x0+bb.x1)/2,y:(bb.y0+bb.y1)/2},scr=p=>{const r=rotV(p,vr);return{x:(r.x-rc.x)*k,y:-(r.y-rc.y)*k}},sv=v=>{const r=rotV(v,vr);return{x:r.x,y:-r.y}};
+  const SP=m.P.map(scr),parts=geo.parts.map(p=>p.rings.map(r=>r.map(scr))),n=SP.length;
+  const mc=document.createElement('canvas').getContext('2d'),mw=(s,f,w)=>{mc.font=`${w} ${f}px ${FONT}`;mc.direction='rtl';return mc.measureText(s).width};
+  const rectAt=(x,y,a,W,H)=>[[-1,-1],[1,-1],[1,1],[-1,1]].map(([u,v])=>{const r=rotV({x:u*W/2,y:v*H/2},a);return{x:x+r.x,y:y+r.y}});
+  const samples=r=>{const c0=centroid(r);return[...r,...r.map((p,i)=>mul(add(p,r[(i+1)%4]),0.5)),c0]};
+  const inParts=p=>parts.some(pg=>inPoly(p,pg[0])&&!pg.slice(1).some(h=>inPoly(p,h)));
+  const labs=[],free=r=>!labs.some(l=>overlap(l.r,r));
+  const mk=(s,x,y,a,f,w,col)=>{const W=mw(s,f,w)+6,H=f*1.35;return{s,x,y,a,f,w,col,W,H,r:rectAt(x,y,a,W,H)}};
+  const outsideOK=r=>samples(r).every(p=>!inPoly(p,SP))&&!SP.some(p=>inPoly(p,r));
+  const upright=(A,B)=>{let a=Math.atan2(B.y-A.y,B.x-A.x);if(a>=Math.PI/2-1e-6)a-=Math.PI;if(a<-Math.PI/2-1e-6)a+=Math.PI;return a};
+  // no room straight out (e.g. a narrow notch): nearest free spot outside the parcel, drawn with a leader line
+  const spiral=(s,M0,f,w,col)=>{let t=null;for(let rad=30;rad<2000&&!t;rad+=12)for(let k2=0;k2<24;k2++){const an=k2/24*2*Math.PI,c0=mk(s,M0.x+Math.cos(an)*rad,M0.y+Math.sin(an)*rad,0,f,w,col);
+      if(outsideOK(c0.r)&&free(c0.r)){t=c0;break}}t=t||mk(s,M0.x,M0.y-40,0,f,w,col);t.lead=M0;return t};
+  const dims=[],eInfo=[];
+  // 1) edge lengths outside the parcel, parallel to each edge
+  m.edges.forEach((e,i)=>{const A=SP[i],B=SP[(i+1)%n],L=Math.hypot(B.x-A.x,B.y-A.y),nv=sv(e.nOut),no=mul(nv,1/(Math.hypot(nv.x,nv.y)||1)),a=upright(A,B),M0=mul(add(A,B),0.5);
+    if(L>=28)dims.push({a:add(A,mul(no,10)),b:add(B,mul(no,10)),no});
+    let lab=null,off=0;for(let j=0;j<14;j++){off=18+7+j*14;const t=mk(bNum(e.len),M0.x+no.x*off,M0.y+no.y*off,a,14,600,BLD.ink);if(outsideOK(t.r)&&free(t.r)){lab=t;break}}
+    if(!lab){lab=spiral(bNum(e.len),M0,14,600,BLD.ink);off=Math.hypot(lab.x-M0.x,lab.y-M0.y)}
+    lab.off=off;labs.push(lab);eInfo.push({A,B,no,a,M0,lab})});
+  // 2) setback values inside the band between the parcel edge and the buildable area
+  const later=[],anySb=sbs.length>0;
+  m.edges.forEach((e,i)=>{const{A,B,no,a}=eInfo[i];if(!(e.sb>0)){if(anySb)later.push(i);return}
+    const d=e.sb*k,f=Math.min(15,d*0.62);let ok=null;
+    if(f>=9.5)find:for(const t of[0.5,0.38,0.62,0.26,0.74,0.15,0.85])for(const aa of[0,a]){const P0=add(A,mul(sub(B,A),t)),cand=mk(bNum(e.sb),P0.x-no.x*d/2,P0.y-no.y*d/2,aa,f,500,BLD.sb);
+      if(samples(cand.r).every(p=>inPoly(p,SP)&&!inParts(p))&&!parts.some(pg=>pg[0].some(p=>inPoly(p,cand.r)))&&free(cand.r)){ok=cand;break find}}
+    if(ok)labs.push(ok);else later.push(i)});
+  // 3) band too thin (or no setback): value goes outside, after the edge length, never over the buildable area
+  later.forEach(i=>{const e=m.edges[i],{no,a,M0,lab}=eInfo[i],s='ارتداد '+bNum(e.sb);let t=null;
+    if(!lab.lead)for(let j=0;j<14;j++){const off=lab.off+lab.H/2+9+j*13,c0=mk(s,M0.x+no.x*off,M0.y+no.y*off,a,12,500,BLD.sb);if(outsideOK(c0.r)&&free(c0.r)){t=c0;break}}
+    labs.push(t||spiral(s,M0,12,500,BLD.sb))});
+  // 4) area label at the most interior point of each buildable part
+  const pole=pg=>{const R=pg[0],b=bbox(R),st=Math.max(1,Math.min(b.x1-b.x0,b.y1-b.y0)/30),dd=p=>Math.min(...pg.flatMap(r=>r.map((q,i)=>distSeg(p,q,r[(i+1)%r.length]))));
+    let best={x:0,y:0,d:-1};for(let x=b.x0+st/2;x<b.x1;x+=st)for(let y=b.y0+st/2;y<b.y1;y+=st){const p={x,y};if(!inPoly(p,R)||pg.slice(1).some(h=>inPoly(p,h)))continue;const d=dd(p);if(d>best.d)best={x,y,d}}
+    const c0=centroid(R);if(inPoly(c0,R)&&!pg.slice(1).some(h=>inPoly(c0,h))&&dd(c0)>=best.d*0.8)return c0;return best};
+  const areaLabs=[],fits=(pg,c0,lines,f,w)=>{const W=Math.max(...lines.map(s=>mw(s,f,w)))+10,H=lines.length*f*1.45,r=rectAt(c0.x,c0.y,0,W,H);
+    return samples(r).every(p=>inPoly(p,pg[0])&&!pg.slice(1).some(h=>inPoly(p,h)))&&!pg.flatMap(x=>x).some(p=>inPoly(p,r))};
+  const multi=parts.length>1,areaS=v=>bNum(v)+' م²';
+  parts.forEach((pg,pi)=>{const c0=pole(pg),opts=pi===0?(multi?[['المساحة القابلة','للبناء (الإجمالي)',areaS(geo.area)],['المساحة القابلة للبناء',areaS(geo.area)],[areaS(geo.area)]]
+      :[['المساحة القابلة','للبناء',areaS(geo.area)],['المساحة القابلة للبناء',areaS(geo.area)],[areaS(geo.area)]]):[[areaS(geo.parts[pi].area)]];
+    for(let f=pi?15:20;f>=9;f--){const o=opts.find(L=>fits(pg,c0,L,f,600));if(o){areaLabs.push({x:c0.x,y:c0.y,lines:o,f});break}}});
+  // overall size: parcel centred exactly; every label inside the canvas
+  const pts=[...SP,...labs.flatMap(l=>l.r),...dims.flatMap(d=>[add(d.a,mul(d.no,5)),add(d.b,mul(d.no,5))])];
+  const pad=22,hx=Math.max(...pts.map(p=>Math.abs(p.x)))+pad,hy=Math.max(...pts.map(p=>Math.abs(p.y)))+pad;
+  const geom=m.plotArea?geo.area/m.plotArea*100:0,reg=bldRegRatio(),title=bldTitle(m);
+  const banner=reg!=null?'أقصى نسبة بناء: '+bPct(reg):'أقصى نسبة بناء (حسب الارتدادات): '+bPct(geom);
+  const caps=['مساحة الأرض '+areaS(m.plotArea)+'  |  المساحة بعد الارتدادات '+areaS(geo.area)+' ('+bPct(geom)+' من الأرض)',
+    reg!=null?'النسبة النظامية '+bPct(reg)+'  |  النسبة الهندسية بعد الارتدادات '+bPct(geom)+'  |  الأبعاد والارتدادات بالمتر'
+      :'لم تُحدَّد نسبة بناء نظامية؛ النسبة المعروضة هندسية ناتجة عن الارتدادات  |  الأبعاد بالمتر'];
+  if(multi)caps.push('المساحة القابلة للبناء مكوّنة من '+fmt(parts.length)+' أجزاء: '+geo.parts.map(p=>bNum(p.area)).join(' + ')+' م²');
+  const P0=24,TH=54,G1=18,G2=16,BH=46,G3=12,CH=19,tf=22,bf=20,cf=12.5;
+  const W=Math.ceil(Math.max(2*hx,mw(title,tf,700)+64,mw(banner,bf,700)+80,...caps.map(s=>mw(s,cf,400)+16),420)+2*P0);
+  const H=Math.ceil(P0+TH+G1+2*hy+G2+BH+G3+caps.length*CH+P0),cyD=P0+TH+G1+hy;
+  let pr=3;while(pr>1&&(W*H*pr*pr>48e6||Math.max(W,H)*pr>16000))pr-=0.5;
+  const cv2=document.createElement('canvas');cv2.width=Math.round(W*pr);cv2.height=Math.round(H*pr);const x=cv2.getContext('2d');x.scale(pr,pr);
+  const T=(s,X,Y,f,w,col,a=0)=>{x.save();x.font=`${w} ${f}px ${FONT}`;x.fillStyle=col;x.textAlign='center';x.textBaseline='middle';x.direction='rtl';x.translate(X,Y);if(a)x.rotate(a);x.fillText(s,0,0);x.restore()};
+  const rr=(X,Y,w,h,r)=>{x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath()};
+  const ring=r=>r.forEach((p,i)=>i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y));
+  x.fillStyle='#ffffff';x.fillRect(0,0,W,H);
+  rr(P0,P0,W-2*P0,TH,8);x.fillStyle=BLD.titleBg;x.fill();T(title,W/2,P0+TH/2+1,tf,700,BLD.title);
+  x.save();x.translate(W/2,cyD);
+  x.beginPath();ring(SP);x.closePath();x.fillStyle=BLD.band;x.fill();
+  parts.forEach(pg=>{x.beginPath();pg.forEach(r=>{ring(r);x.closePath()});x.fillStyle=BLD.fill;x.fill('evenodd');x.strokeStyle=BLD.fillS;x.lineWidth=1;x.stroke()});
+  x.beginPath();ring(SP);x.closePath();x.setLineDash([7,5]);x.strokeStyle=BLD.edge;x.lineWidth=1.6;x.stroke();x.setLineDash([]);
+  x.strokeStyle='#a5a5a5';x.lineWidth=1;dims.forEach(d=>{x.beginPath();x.moveTo(d.a.x,d.a.y);x.lineTo(d.b.x,d.b.y);
+    for(const p of[d.a,d.b]){x.moveTo(p.x-d.no.x*5,p.y-d.no.y*5);x.lineTo(p.x+d.no.x*5,p.y+d.no.y*5)}x.stroke()});
+  labs.forEach(l=>{if(!l.lead)return;const r=l.r,cc={x:l.x,y:l.y},d=sub(l.lead,cc),tt=Math.min(...[0,1,2,3].map(i=>{const p=r[i],q=r[(i+1)%4],e2=sub(q,p),den=cross(d,e2);if(Math.abs(den)<1e-9)return 1;
+      const s2=cross(sub(p,cc),e2)/den,u=cross(sub(p,cc),d)/den;return s2>0&&u>=0&&u<=1?s2:1}));const st=add(cc,mul(d,tt));
+    x.beginPath();x.moveTo(st.x,st.y);x.lineTo(l.lead.x,l.lead.y);x.strokeStyle='#8a8a8a';x.lineWidth=0.9;x.stroke();x.beginPath();x.arc(l.lead.x,l.lead.y,2,0,Math.PI*2);x.fillStyle='#8a8a8a';x.fill()});
+  labs.forEach(l=>T(l.s,l.x,l.y,l.f,l.w,l.col,l.a));
+  areaLabs.forEach(l=>{const lh=l.f*1.45,y0=l.y-(l.lines.length-1)*lh/2;l.lines.forEach((s,i)=>T(s,l.x,y0+i*lh,i===l.lines.length-1?l.f:l.f*0.92,i===l.lines.length-1?700:500,'#ffffff'))});
+  x.restore();
+  const bw2=Math.min(W-2*P0,Math.max(mw(banner,bf,700)+80,(W-2*P0)*0.6)),by=cyD+hy+G2;
+  rr((W-bw2)/2,by,bw2,BH,6);x.fillStyle=BLD.bar;x.fill();T(banner,W/2,by+BH/2+1,bf,700,BLD.ink);
+  caps.forEach((s,i)=>T(s,W/2,by+BH+G3+CH*i+CH/2,cf,400,BLD.muted));
+  return{cv:cv2,W,H,pr,geom,reg,title,missing:areaLabs.length<parts.length}}
+
+let BLD_OUT=null;
+function closeBld(){$('#bldModal').hidden=true;if(BLD_OUT&&BLD_OUT.url)URL.revokeObjectURL(BLD_OUT.url);BLD_OUT=null}
+$('#xBld').onclick=async()=>{M=compute();if(M.bad){toast('أدخل حدود الأرض أولاً.');return}
+  const geo=buildableGeom(M);
+  if(!geo.parts.length){toast(M.hasSb?'الارتدادات تستهلك كامل مساحة الأرض؛ لا توجد مساحة قابلة للبناء.':'تعذّر حساب المساحة القابلة للبناء.');return}
+  toast('جارٍ تجهيز المخطط…');
+  try{if(document.fonts)await Promise.all(['400','500','600','700'].map(w=>document.fonts.load(`${w} 16px "IBM Plex Sans Arabic"`,'المساحة ١٢٣')))}catch(e){}
+  const out=drawBuildable(M,geo),blob=await new Promise(r=>out.cv.toBlob(r,'image/png'));
+  closeBld();BLD_OUT={blob,url:URL.createObjectURL(blob),name:baseName()+'_buildable-area.png'};
+  $('#bldHead').textContent='معاينة مخطط المساحة بعد الارتدادات';$('#bldPdf').hidden=true;
+  $('#bldImg').src=BLD_OUT.url;
+  $('#bldInfo').textContent=`المساحة القابلة للبناء ${fmtU(geo.area,2)} م² من ${fmtU(M.plotArea,2)} م² (هندسياً ${fmtU(out.geom,1)}٪)`+
+    (out.reg!=null?` · النسبة النظامية ${fmtU(out.reg,1)}٪ ⇒ أقصى مسطح أرضي ${fmtU(Math.min(geo.area,M.plotArea*out.reg/100),2)} م²`:' · لم تُحدَّد نسبة نظامية')+
+    (geo.parts.length>1?` · ${geo.parts.length} أجزاء`:'')+` · ${out.W}×${out.H} بكسل × ${out.pr}`+
+    (geo.method==='offset'?' · تنبيه: مكتبة القص الهندسي لم تُحمَّل؛ استُخدم خط الارتداد التقريبي.':'');
+  $('#bldModal').hidden=false;$('#bldSave').focus()};
+$('#bldSave').onclick=()=>{if(BLD_OUT)saveFile(BLD_OUT.name,BLD_OUT.blob)};
+$('#bldClose').onclick=closeBld;$('#bldCancel').onclick=closeBld;
+$('#bldModal').addEventListener('click',e=>{if(e.target.id==='bldModal')closeBld()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#bldModal').hidden)closeBld()});
+
+/* ---------- transaction template: fixed layout (1800×800), only the values change ---------- */
+const STORE_TXP='gis-parcel-planner-tx-photo-v1';let TXIMG=null,TXDATA=null;
+const TX={green:'#1d6b4a',dark:'#1f2421',muted:'#7a7a7a',line:'#dfe3e1',panel:'#f7f8f7',band:'#cdc4b5',bandS:'#b5ab9a',inner:'#dcefe3',road:'#9e9e9e',qibla:'#e8833a',box:'#f3ede2',head:'#1d5e3f',dim:'#9a9a9a'};
+const nE=(v,d=0)=>new Intl.NumberFormat('en-US',{maximumFractionDigits:d}).format(v);
+function txSetbacks(m){const r={front:[],rear:[],side:[]};m.edges.forEach((e,i)=>{const k=S.verts[i].role||'side';if(r[k])r[k].push(e.sb)});
+  const f=a=>a.length?nE(Math.max(...a),2):'-';return{front:f(r.front),rear:f(r.rear),side:f(r.side)}}
+function txLink(m){const u=String(S.tx.qr||'').trim();if(u)return u;const ll=toLL(m.geo,centroid(m.P));return`https://www.google.com/maps?q=${ll.lat.toFixed(6)},${ll.lon.toFixed(6)}`}
+function txMiniTile(m){const ll=toLL(m.geo,centroid(m.P)),z=16,fx=lx(ll.lon,z),fy=ly(ll.lat,z);return{t:tileImg(z,Math.floor(fx),Math.floor(fy)),px:(fx%1)*256,py:(fy%1)*256}}
+function txPole(P){const b=bbox(P),st=Math.max(1,Math.min(b.x1-b.x0,b.y1-b.y0)/30),dd=p=>Math.min(...P.map((q,i)=>distSeg(p,q,P[(i+1)%P.length])));let best=null,bd=-1;
+  for(let X=b.x0+st/2;X<b.x1;X+=st)for(let Y=b.y0+st/2;Y<b.y1;Y+=st){const p={x:X,y:Y};if(!inPoly(p,P))continue;const d=dd(p);if(d>bd){best=p;bd=d}}
+  const c0=centroid(P);return inPoly(c0,P)&&dd(c0)>=bd*0.8?c0:(best||c0)}
+function drawQR(x,text,X,Y,sz){x.fillStyle='#fff';x.fillRect(X,Y,sz,sz);
+  if(!window.qrcode){x.strokeStyle='#bbb';x.strokeRect(X,Y,sz,sz);x.fillStyle='#999';x.font=`600 11px ${FONT}`;x.textAlign='center';x.textBaseline='middle';x.fillText('QR',X+sz/2,Y+sz/2);return false}
+  const q=qrcode(0,'M');q.addData(text);q.make();const n=q.getModuleCount(),c=sz/(n+2);x.fillStyle='#000';
+  for(let r=0;r<n;r++)for(let k=0;k<n;k++)if(q.isDark(r,k))x.fillRect(X+c*(k+1),Y+c*(r+1),c+0.05,c+0.05);return true}
+function drawTx(m,geo,mini){
+  const W=1800,H=800,pr=2,cv2=document.createElement('canvas');cv2.width=W*pr;cv2.height=H*pr;const x=cv2.getContext('2d');x.scale(pr,pr);
+  const F=(f,w)=>`${w} ${f}px ${FONT}`,mw=(s,f,w=400)=>{x.font=F(f,w);x.direction='rtl';return x.measureText(s).width};
+  const T=(s,X,Y,f,w,col,al='center',a=0)=>{x.save();x.font=F(f,w);x.fillStyle=col;x.textAlign=al;x.textBaseline='middle';x.direction='rtl';x.translate(X,Y);if(a)x.rotate(a);x.fillText(s,0,0);x.restore()};
+  const fitF=(s,f,maxW,w=400)=>{while(f>9&&mw(s,f,w)>maxW)f-=0.5;return f};
+  const rr=(X,Y,w,h,r)=>{x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath()};
+  const hl=(x0,x1,y)=>{x.beginPath();x.moveTo(x0,y);x.lineTo(x1,y);x.strokeStyle='#e6e9e7';x.lineWidth=1;x.stroke()};
+  const wrapL=(s,f,maxW)=>{const out=[];String(s||'').split('\n').forEach(par=>{let line='';par.split(/\s+/).forEach(word=>{const t=line?line+' '+word:word;if(mw(t,f)>maxW&&line){out.push(line);line=word}else line=t});out.push(line)});return out};
+  const pin=(X,Y,r,col)=>{x.beginPath();x.arc(X,Y-r*0.35,r*0.62,Math.PI*0.85,Math.PI*0.15);x.lineTo(X,Y+r);x.closePath();x.fillStyle=col;x.fill();x.beginPath();x.arc(X,Y-r*0.35,r*0.24,0,Math.PI*2);x.fillStyle=col==='#fff'?TX.head:'#fff';x.fill()};
+  const nrm=v=>mul(v,1/(Math.hypot(v.x,v.y)||1));
+  const tx=S.tx,area=m.plotArea,ratio=+tx.ratio||0,far=parseFloat(tx.far),hasFar=isFinite(far)&&far>0,total=hasFar?area*far:area*ratio/100,pp=+tx.parkPct||0,sb=txSetbacks(m);
+  x.fillStyle='#ffffff';x.fillRect(0,0,W,H);x.fillStyle=TX.panel;x.fillRect(900,0,W-900,H);x.fillStyle='#e6e9e7';x.fillRect(899,0,1,H);
+
+  // ---- right: location + building regulations
+  rr(1370,28,395,52,26);x.fillStyle='#eceeed';x.fill();x.strokeStyle='#dde1df';x.lineWidth=1;x.stroke();T('موقع الأرض',1585,55,25,500,TX.dark);
+  x.beginPath();x.arc(1402,54,21,0,Math.PI*2);x.fillStyle='#d5e7db';x.fill();x.strokeStyle=TX.green;x.lineWidth=2;x.stroke();pin(1402,56,11,TX.green);
+  const loc=String(tx.loc||'').replace(/\s*[>›]\s*/g,' › ');T(loc,1757,115,fitF(loc,21,800),400,'#6b6b6b','right');
+  const hd='تنظيمات واشتراطات البناء',hw=mw(hd,24,700);T(hd,1757,175,24,700,TX.green,'right');x.fillStyle=TX.green;x.fillRect(1757-hw,195,hw,4);
+  const card=(i,y,h)=>{const X=1757-(i+1)*153-i*12;rr(X,y,153,h,10);x.fillStyle='#fff';x.fill();x.strokeStyle=TX.line;x.lineWidth=1.2;x.stroke();return X+76.5};
+  [[`${nE(area)}م²`,'مساحة قطعة','الأرض'],[tx.bType||'-','نوع المبنى','المسموح'],[tx.floors||'-','الحد الأقصى لعدد','الأدوار (دور)'],
+   [tx.height&&tx.height!=='-'?`${tx.height}م`:'-','الحد الأقصى','للارتفاع (م)'],[`${nE(ratio,1)}%`,'نسبة البناء','الدور الأرضي']]
+    .forEach(([v,l1,l2],i)=>{const cx=card(i,210,130);T(v,cx,247,fitF(v,27,135,500),500,TX.green);T(l1,cx,287,17,400,TX.muted);T(l2,cx,310,17,400,TX.muted)});
+  [[`${nE(total)}م²`,'مساحة البناء','الإجمالية (م2)',TX.green],[hasFar?nE(far,2):'-','معامل مسطح','البناء (FAR)',TX.dark],
+   [sb.front,'الارتداد الأمامي(م)','',TX.dark],[sb.rear,'الارتداد الخلفي(م)','',TX.dark],[sb.side,'الارتداد الجانبي (م)','',TX.dark]]
+    .forEach(([v,l1,l2,col],i)=>{const cx=card(i,367,95);if(l2){T(l1,cx,389,16,400,TX.muted);T(l2,cx,410,16,400,TX.muted)}else T(l1,cx,396,fitF(l1,16.5,140),400,TX.muted);T(v,cx,441,fitF(v,27,135,500),500,col)});
+  rr(935,478,822,300,10);x.fillStyle='#fff';x.fill();x.strokeStyle=TX.line;x.lineWidth=1.2;x.stroke();
+  const rows=[['اشتراطات مواقف السيارات',tx.parkTxt],['الاستخدامات المسموح بها',tx.uses],['الاستخدامات غير المسموح بها',tx.notUses],
+    ['الاشتراطات الخاصة',tx.special],[tx.archLbl||'اشتراطات العمارة',tx.arch],['الميزة التخطيطية',tx.adv]],rh=300/6;
+  rows.forEach(([l,v],i)=>{const y=478+i*rh;if(i)hl(952,1740,y);T(l,1740,y+rh/2,fitF(l,19,270,600),600,TX.dark,'right');
+    let f=16,ls=wrapL(v||'-',f,490);while(ls.length>2&&f>10){f-=0.5;ls=wrapL(v||'-',f,490)}ls=ls.slice(0,2);
+    const lh=f*1.3;ls.forEach((s,j)=>T(s,1452,y+rh/2+(j-(ls.length-1)/2)*lh,f,400,'#555','right'))});
+
+  // ---- left: parcel drawing (true shape, view rotation from the sheet)
+  const vr=(+S.sheet.vr||0)*D2R,rp=m.P.map(p=>rotV(p,vr)),bb=bbox(rp),bw=Math.max(1,bb.x1-bb.x0),bh=Math.max(1,bb.y1-bb.y0);
+  const R0={x0:400,x1:870,y0:120,y1:490},mg=50,k=Math.min((R0.x1-R0.x0-2*mg)/bw,(R0.y1-R0.y0-2*mg)/bh),cx0=(R0.x0+R0.x1)/2,cy0=(R0.y0+R0.y1)/2,rc={x:(bb.x0+bb.x1)/2,y:(bb.y0+bb.y1)/2};
+  const scr=p=>{const r=rotV(p,vr);return{x:cx0+(r.x-rc.x)*k,y:cy0-(r.y-rc.y)*k}},sv=v=>{const r=rotV(v,vr);return nrm({x:r.x,y:-r.y})};
+  const SP=m.P.map(scr),n=SP.length,ring=r=>r.forEach((p,i)=>i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y));
+  const up=(A,B)=>{let a=Math.atan2(B.y-A.y,B.x-A.x);if(a>Math.PI/2)a-=Math.PI;if(a<=-Math.PI/2)a+=Math.PI;return a};
+  const isFront=i=>(S.verts[i].role||'side')==='front';
+  m.edges.forEach((e,i)=>{if(!isFront(i))return;const A=SP[i],B=SP[(i+1)%n],no=sv(e.nOut),g=5,w=32,q=[add(A,mul(no,g)),add(B,mul(no,g)),add(B,mul(no,g+w)),add(A,mul(no,g+w))];
+    x.beginPath();ring(q);x.closePath();x.fillStyle=TX.road;x.fill();
+    const s=e.name||'شارع',L=Math.hypot(B.x-A.x,B.y-A.y),M0=mul(add(A,B),0.5);T(s,M0.x+no.x*(g+w/2),M0.y+no.y*(g+w/2),Math.min(17,fitF(s,17,L-20,600)),600,'#fff','center',up(A,B))});
+  x.beginPath();ring(SP);x.closePath();x.fillStyle=TX.band;x.fill();
+  geo.parts.forEach(pg=>{x.beginPath();pg.rings.forEach(r=>{ring(r.map(scr));x.closePath()});x.fillStyle=TX.inner;x.fill('evenodd')});
+  x.beginPath();ring(SP);x.closePath();x.strokeStyle=TX.bandS;x.lineWidth=2;x.stroke();
+  m.edges.forEach((e,i)=>{const A=SP[i],B=SP[(i+1)%n];if(Math.hypot(B.x-A.x,B.y-A.y)<45)return;const no=sv(e.nOut),off=isFront(i)?56:22,M0=mul(add(A,B),0.5);
+    T(`${nE(e.len,1)}م`,M0.x+no.x*off,M0.y+no.y*off,20,500,TX.dim,'center',up(A,B))});
+  const ctr=txPole(SP);let fs=clamp(Math.min(bw,bh)*k/7,13,34);
+  const txtFits=f=>{const hw=Math.max(mw('مساحة الموقع',f*0.9,700),mw(`${nE(area)}م²`,f,700))/2+4,hh=f*1.3;   // area text box must lie inside the parcel
+    return[[-1,-1],[1,-1],[1,1],[-1,1]].every(([u,v])=>inPoly({x:ctr.x+u*hw,y:ctr.y+v*hh},SP))};
+  while(fs>12&&!txtFits(fs))fs-=0.5;
+  T('مساحة الموقع',ctr.x,ctr.y-fs*0.62,fs*0.9,700,TX.green);T(`${nE(area)}م²`,ctr.x,ctr.y+fs*0.62,fs,700,TX.green);
+  // qibla (optional): kaaba near the boundary in the qibla direction, label on the same ray clear of the area text; no room inside → badge beside the north arrow
+  if(tx.qibla!==false){const dq=sv(m.vh),lw=mw('اتجاه القبلة',21,700),ext=Math.abs(dq.x)*lw/2+Math.abs(dq.y)*13+6;let t=0;while(t<3000&&inPoly(add(ctr,mul(dq,t+4)),SP))t+=4;
+    const cw=Math.max(mw('مساحة الموقع',fs*0.9,700),mw(`${nE(area)}م²`,fs,700))/2+8,ch=fs*1.35+8;
+    const clearC=(c,hw,hh)=>!(Math.abs(c.x-ctr.x)<cw+hw&&Math.abs(c.y-ctr.y)<ch+hh);
+    const okIn=c=>[[-1,-1],[1,-1],[1,1],[-1,1],[0,0]].every(([u,v])=>inPoly({x:c.x+u*(lw/2+4),y:c.y+v*15},SP))&&clearC(c,lw/2+4,15);
+    const kb=add(ctr,mul(dq,t-18)),pn={x:-dq.y,y:dq.x},extU=u=>Math.abs(u.x)*lw/2+Math.abs(u.y)*13+6;let lb=null;
+    if(clearC(kb,12,12))find:for(let d=ext+30;d<t;d+=6)for(const s of[0,40,-40,80,-80]){const c=add(add(kb,mul(dq,-d)),mul(pn,s)),dl=Math.hypot(kb.x-c.x,kb.y-c.y);
+      if(dl-extU(nrm(sub(kb,c)))-14>=22&&okIn(c)){lb=c;break find}}
+    const kaaba=(p,s)=>{x.save();x.translate(p.x,p.y);x.fillStyle='#1b1b1b';x.fillRect(-s,-s,2*s,2*s);x.fillStyle='#d4a640';x.fillRect(-s,-s*0.45,2*s,s*0.33);x.restore()};
+    const arrow=(a0,a1)=>{const u=nrm(sub(a1,a0)),q={x:-u.y,y:u.x};x.strokeStyle=TX.qibla;x.fillStyle=TX.qibla;x.lineWidth=2.5;x.beginPath();x.moveTo(a0.x,a0.y);x.lineTo(a1.x,a1.y);x.stroke();
+      x.beginPath();x.moveTo(a1.x+u.x*4,a1.y+u.y*4);x.lineTo(a1.x-u.x*8+q.x*6,a1.y-u.y*8+q.y*6);x.lineTo(a1.x-u.x*8-q.x*6,a1.y-u.y*8-q.y*6);x.closePath();x.fill()};
+    if(lb){const u=nrm(sub(kb,lb));arrow(add(lb,mul(u,extU(u))),add(kb,mul(u,-14)));kaaba(kb,9);T('اتجاه القبلة',lb.x,lb.y,21,700,TX.qibla)}
+    else{const c0={x:790,y:58};x.beginPath();x.arc(c0.x,c0.y,34,0,Math.PI*2);x.fillStyle='#fff';x.fill();x.strokeStyle='#e5d3c2';x.lineWidth=1.5;x.stroke();
+      arrow(add(c0,mul(dq,-24)),add(c0,mul(dq,10)));kaaba(add(c0,mul(dq,22)),6);T('اتجاه القبلة',c0.x,c0.y+52,17,700,TX.qibla)}}
+  if(tx.north!==false){const nv=sv({x:0,y:1}),c0={x:575,y:72};x.save();x.translate(c0.x,c0.y);x.rotate(Math.atan2(nv.x,-nv.y));x.fillStyle=TX.dim;x.beginPath();
+    x.moveTo(0,-28);x.lineTo(16,-4);x.lineTo(6,-4);x.lineTo(6,30);x.lineTo(-6,30);x.lineTo(-6,-4);x.lineTo(-16,-4);x.closePath();x.fill();x.restore();
+    T('N',c0.x+nv.x*48,c0.y+nv.y*48,22,700,TX.dim)}
+  {const tot=[5,10,20,25,50,100,200,250,500,1000,2000].filter(v=>v*k<=170).pop()||5,L=tot*k,y=528,x0=620-L/2;
+    x.strokeStyle='#8a8a8a';x.lineWidth=1.5;x.beginPath();x.moveTo(x0,y);x.lineTo(x0+L,y);[0,0.5,1].forEach(f=>{x.moveTo(x0+L*f,y-7);x.lineTo(x0+L*f,y+7)});x.stroke();
+    [0,0.5,1].forEach(f=>T(f===1?`${nE(tot)}م`:nE(tot*f,1),x0+L*f,y+20,16,400,'#8a8a8a'))}
+
+  // ---- developable-area box
+  rr(55,72,275,183,4);x.fillStyle=TX.box;x.fill();
+  T('المساحة القابلة للتطوير',192,110,fitF('المساحة القابلة للتطوير',22,255,700),700,TX.green);T(`${nE(geo.area)}م²`,192,150,38,700,TX.green);
+  const kv=(lbl,pct,val,y)=>{const segs=[[lbl,600],[`${nE(pct,1)}%`,500],['←',400],[`${nE(val)}م²`,500]],g=7,ws=segs.map(([s,w])=>mw(s,18,w));
+    let xr=192+(ws.reduce((a,b)=>a+b,0)+g*3)/2;segs.forEach(([s,w],i)=>{T(s,xr,y,18,w,TX.dark,'right');xr-=ws[i]+g})};
+  kv('نسبة البناء',ratio,area*ratio/100,193);kv('المواقف',pp,area*pp/100,220);
+
+  // ---- photo documentation card: photo + mini map + caption + QR
+  x.save();x.shadowColor='rgba(0,0,0,0.18)';x.shadowBlur=14;x.shadowOffsetY=3;rr(13,390,354,386,10);x.fillStyle='#fff';x.fill();x.restore();
+  rr(13,390,354,42,9);x.fillStyle=TX.head;x.fill();pin(349,412,11,'#fff');T('التوثيق الفوتوغرافي',334,411,19,700,'#fff','right');
+  // photo frame with the reference padding; the photo fills the frame width and a taller photo is cropped from the top only,
+  // so a QR/caption strip already printed at its bottom stays intact
+  const strip=!!tx.qrStrip,ph=strip?{x:40,y:440,w:295,h:252}:{x:40,y:440,w:300,h:324};
+  if(TXIMG){const iw=ph.w,ih=TXIMG.naturalHeight*ph.w/TXIMG.naturalWidth,dy=ih>ph.h?ph.y+ph.h-ih:ph.y+(ph.h-ih)/2;
+    x.save();x.beginPath();x.rect(ph.x,ph.y,ph.w,ph.h);x.clip();x.drawImage(TXIMG,ph.x,dy,iw,ih);x.restore();
+    if(!strip){const y0=Math.max(ph.y,dy);x.strokeStyle='#d6dbd8';x.lineWidth=1;x.strokeRect(ph.x,y0,ph.w,Math.min(ph.y+ph.h,dy+ih)-y0)}}
+  else{x.fillStyle='#e8ebe9';x.fillRect(ph.x,ph.y,ph.w,ph.h);T('صورة الموقع',ph.x+ph.w/2,ph.y+ph.h/2,18,500,'#8a8a8a')}
+  if(strip){const sy=ph.y+ph.h;x.strokeStyle='#cfd4d1';x.lineWidth=1;x.strokeRect(ph.x,ph.y,ph.w,ph.h+70);hl(ph.x,ph.x+ph.w,sy);
+  if(mini&&mini.t.ok){const s0=96,ox=clamp(mini.px-s0/2,0,256-s0),oy=clamp(mini.py-s0/2,0,256-s0),bx={x:46,y:sy+4,w:66,h:62};
+    x.drawImage(mini.t.im,ox,oy,s0,s0,bx.x,bx.y,bx.w,bx.h);const dx=bx.x+(mini.px-ox)/s0*bx.w,dy=bx.y+(mini.py-oy)/s0*bx.h;
+    x.beginPath();x.arc(dx,dy,5,0,Math.PI*2);x.fillStyle='#e53935';x.fill();x.strokeStyle='#fff';x.lineWidth=1.5;x.stroke()}
+  else{x.fillStyle='#dfe5e1';x.fillRect(46,sy+4,66,62);pin(79,sy+36,12,'#e53935')}
+  const cl=String(tx.cap||'').split('\n').filter(s=>s.trim()).slice(0,3);cl.forEach((s,i)=>T(s,190,sy+35+(i-(cl.length-1)/2)*16,fitF(s,12,140,500),500,TX.dark));
+  drawQR(x,txLink(m),267,sy+4,62)}
+  rr(748,748,114,34,6);x.fillStyle=TX.head;x.fill();T('الموقع',805,766,20,600,'#fff');
+  rr(6,6,W-12,H-12,10);x.strokeStyle='#e3e6e4';x.lineWidth=1.5;x.stroke();
+  return{cv:cv2,W,H,pr}}
+function loadTxPhoto(dataUrl,fresh){const im=new Image();im.onload=()=>{TXIMG=im;TXDATA=dataUrl;$('#txPhotoInfo').textContent=`الصورة جاهزة (${im.naturalWidth}×${im.naturalHeight})`;
+  try{localStorage.setItem(STORE_TXP,dataUrl)}catch(e){if(fresh)toast('الصورة كبيرة على الحفظ في المتصفح؛ ستبقى حتى تغلق الصفحة.')}};
+  im.onerror=()=>toast('تعذّر قراءة الصورة. جرّب PNG أو JPG.');im.src=dataUrl}
+function clearTxPhoto(){TXIMG=null;TXDATA=null;$('#txPhotoInfo').textContent='لا توجد صورة بعد.';try{localStorage.removeItem(STORE_TXP)}catch(e){}}
+// phone photos are downscaled (max 1600 px, JPEG) so they fit in browser storage and the project file
+function readTxPhoto(f){if(!f||!f.type.startsWith('image/')){toast('اختر ملف صورة (PNG أو JPG).');return}const r=new FileReader();
+  r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)),c2=document.createElement('canvas');
+    c2.width=Math.round(im.naturalWidth*s);c2.height=Math.round(im.naturalHeight*s);c2.getContext('2d').drawImage(im,0,0,c2.width,c2.height);loadTxPhoto(c2.toDataURL('image/jpeg',0.88),true)};
+    im.onerror=()=>toast('تعذّر قراءة الصورة. جرّب PNG أو JPG.');im.src=r.result};r.readAsDataURL(f)}
+const txDrop=$('#txDrop');txDrop.onclick=()=>$('#txFile').click();txDrop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#txFile').click()}};
+$('#txFile').onchange=e=>{readTxPhoto(e.target.files[0]);e.target.value=''};
+txDrop.addEventListener('dragover',e=>{e.preventDefault();txDrop.classList.add('on')});txDrop.addEventListener('dragleave',()=>txDrop.classList.remove('on'));
+txDrop.addEventListener('drop',e=>{e.preventDefault();txDrop.classList.remove('on');readTxPhoto(e.dataTransfer.files[0])});
+$('#txPhotoClear').onclick=clearTxPhoto;
+$('#xTx').onclick=async()=>{M=compute();if(M.bad){toast('أدخل حدود الأرض أولاً.');return}
+  const geo=buildableGeom(M);toast('جارٍ تجهيز النموذج…');
+  try{if(document.fonts)await Promise.all(['400','500','600','700'].map(w=>document.fonts.load(`${w} 16px "IBM Plex Sans Arabic"`,'المساحة ١٢٣')))}catch(e){}
+  const mini=S.tx.qrStrip?txMiniTile(M):null;if(mini&&!mini.t.ok&&!mini.t.err)await Promise.race([mini.t.p,new Promise(r=>setTimeout(r,6000))]);
+  let out=drawTx(M,geo,mini),blob;
+  try{blob=await new Promise(r=>out.cv.toBlob(r,'image/png'))}catch(e){out=drawTx(M,geo,null);blob=await new Promise(r=>out.cv.toBlob(r,'image/png'))}
+  closeBld();BLD_OUT={blob,url:URL.createObjectURL(blob),name:baseName()+'_transaction.png',cv:out.cv,W:out.W,H:out.H};
+  $('#bldHead').textContent='معاينة نموذج المعاملة';$('#bldPdf').hidden=false;$('#bldImg').src=BLD_OUT.url;
+  $('#bldInfo').textContent=`مساحة الأرض ${fmtU(M.plotArea,2)} م² · القابلة للتطوير ${fmtU(geo.area,2)} م²`+
+    (S.tx.qrStrip?` · QR: ${txLink(M)}`+(window.qrcode?'':' (مكتبة QR لم تُحمَّل)'):'')+(TXIMG?'':' · لم تُرفع صورة الموقع.');
+  $('#bldModal').hidden=false;$('#bldSave').focus()};
+$('#bldPdf').onclick=async()=>{if(!BLD_OUT||!BLD_OUT.cv)return;if(!window.jspdf){toast('مكتبة PDF لم تُحمَّل بعد.');return}
+  const{W,H}=BLD_OUT,pdf=new window.jspdf.jsPDF({orientation:W>=H?'landscape':'portrait',unit:'pt',format:[Math.min(W,H)*0.75,Math.max(W,H)*0.75],compress:true});
+  pdf.addImage(BLD_OUT.cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,W*0.75,H*0.75,undefined,'FAST');await saveFile(BLD_OUT.name.replace(/\.png$/,'.pdf'),pdf.output('blob'))};
+
+/* project file */
+$('#xJson').onclick=()=>saveFile(baseName()+'.json',JSON.stringify({app:'mosque-site-planner',v:1,state:S,image:IMGDATA,txPhoto:TXDATA},null,1));
+$('#openJson').onclick=()=>$('#jsonFile').click();
+$('#jsonFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);S=merge(defaults(),j.state||j);
+  syncInputs();renderVerts();applyProjType();persist();if(j.image)loadImage(j.image,false);else{IMG=null;IMGDATA=null}
+  if(j.txPhoto)loadTxPhoto(j.txPhoto,false);else clearTxPhoto();schedule();toast('فُتح المشروع.')}catch(err){toast('الملف ليس مشروعاً صالحاً.')}};r.readAsText(f);e.target.value=''};
+
+let tt=0;function toast(s){const t=$('#toast');t.textContent=s;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200)}
+
+/* ---------- views: map / sheet ---------- */
+let VIEW='sheet';
+function setView(v){VIEW=v;$('#tabMap').setAttribute('aria-pressed',v==='map');$('#tabSheet').setAttribute('aria-pressed',v==='sheet');
+  $('#desk').hidden=v!=='sheet';$('#mapwrap').hidden=v!=='map';document.querySelectorAll('.sheetonly').forEach(e=>e.hidden=v!=='sheet');
+  if(v==='map')initMap();else schedule()}
+$('#tabMap').onclick=()=>setView('map');$('#tabSheet').onclick=()=>setView('sheet');$('#pickMap').onclick=()=>setView('map');
+function applyProjType(){document.querySelectorAll('details.mq').forEach(d=>d.hidden=S.projType==='land')}
+$('#projType').addEventListener('change',()=>{applyProjType();if(S.projType==='mosque'){S.mosque=null;S.house=null}schedule()});
+
+/* ---------- satellite map (Leaflet + Esri) ---------- */
+let map=null,curPoly=null,drawPts=[],drawMarkers=[],drawPoly=null,drawMode=false,mapErrs=0,mapOk=0;
+function mapMsg(t){const e=$('#mapMsg');e.textContent=t||'';e.hidden=!t}
+function initMap(){
+  if(map){setTimeout(()=>{map.invalidateSize();showCurrentPlot(false)},30);return}
+  if(!window.L){mapMsg('مكتبة الخريطة لم تُحمَّل. تأكد من الاتصال بالإنترنت ثم أعد فتح الملف.');return}
+  map=L.map('map',{doubleClickZoom:false,zoomControl:true});
+  const sat=L.tileLayer(ESRI+'{z}/{y}/{x}',{maxZoom:21,maxNativeZoom:19,attribution:'Esri, Maxar, Earthstar Geographics'}).addTo(map);
+  const lbl=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:21,maxNativeZoom:19}).addTo(map);
+  const osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:21,maxNativeZoom:19,attribution:'© OpenStreetMap'});
+  L.control.layers({'صورة فضائية':sat,'خريطة شوارع':osm},{'أسماء الأماكن':lbl},{position:'bottomleft'}).addTo(map);
+  sat.on('tileerror',()=>{mapErrs++;if(mapErrs>4&&!mapOk)mapMsg('الصور الفضائية لا تعمل داخل صفحة Claude. نزّل البرنامج كملف HTML وافتحه في Chrome أو Edge على جهازك، وستعمل الخريطة كاملة.')});
+  sat.on('tileload',()=>{mapOk++;if(mapOk===1)mapMsg('')});
+  map.on('click',e=>{if(drawMode)addPt(e.latlng)});
+  showCurrentPlot(true);updDraw()}
+function plotLatLngs(){if(!M||M.bad)return null;return M.P.map(p=>{const ll=toLL(M.geo,p);return[ll.lat,ll.lon]})}
+function showCurrentPlot(fit){if(!map)return;if(curPoly){map.removeLayer(curPoly);curPoly=null}const lls=plotLatLngs();
+  if(!lls){map.setView([+S.refLat||24.7,+S.refLon||46.7],15);return}
+  curPoly=L.layerGroup().addTo(map);const outline=L.polygon(lls,{color:'#ffd54a',weight:2.5,fill:false,interactive:false}).addTo(curPoly);
+  if(M.bOk&&M.hasSb)L.polygon(M.B.map(p=>{const ll=toLL(M.geo,p);return[ll.lat,ll.lon]}),{color:'#ff4d40',weight:2,dashArray:'7 5',fill:true,fillOpacity:0.08,interactive:false}).addTo(curPoly);
+  M.edges.forEach((e,i)=>{const ll=toLL(M.geo,mul(add(e.a,e.b),0.5));if(i===HL){const a=toLL(M.geo,e.a),b=toLL(M.geo,e.b);L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{color:'#ff8a00',weight:6,interactive:false}).addTo(curPoly)}
+    L.marker([ll.lat,ll.lon],{interactive:false,icon:L.divIcon({className:'mapen',html:String(i+1),iconSize:[22,22]})}).addTo(curPoly)});
+  if(fit)map.fitBounds(outline.getBounds(),{padding:[60,60],maxZoom:19})}
+function addPt(ll){const i=drawPts.length;drawPts.push(ll);const mk=L.marker(ll,{draggable:true,icon:L.divIcon({className:'vx',iconSize:[14,14]})}).addTo(map);
+  mk.on('drag',e=>{drawPts[i]=e.target.getLatLng();updDraw()});drawMarkers.push(mk);updDraw()}
+function drawnLocal(){if(drawPts.length<1)return null;let la=0,lo=0;drawPts.forEach(p=>{la+=p.lat;lo+=p.lng});la/=drawPts.length;lo/=drawPts.length;
+  const F=localFrame(la,lo);return{lat:la,lon:lo,pts:drawPts.map(p=>F.fromLL({lat:p.lat,lon:p.lng}))}}
+function updDraw(){if(!map)return;if(drawPoly){map.removeLayer(drawPoly);drawPoly=null}
+  if(drawPts.length)drawPoly=(drawPts.length>2?L.polygon(drawPts,{color:'#00e5c0',weight:2,fillOpacity:0.15,interactive:false}):L.polyline(drawPts,{color:'#00e5c0',weight:2,interactive:false})).addTo(map);
+  const d=drawnLocal();let t=drawMode?'اضغط على أركان الأرض بالترتيب':'';
+  if(d&&d.pts.length>2)t=`النقاط <b>${d.pts.length}</b> · المساحة <b>${fmtU(Math.abs(polyArea(d.pts)),1)}</b> م²`;else if(d)t=`النقاط <b>${d.pts.length}</b>`;
+  $('#mInfo').innerHTML=t;$('#mDraw').classList.toggle('on',drawMode);$('#mDraw').textContent=drawMode?'إنهاء الرسم':'رسم الأرض'}
+function clearDraw(){drawMarkers.forEach(mk=>map.removeLayer(mk));drawMarkers=[];drawPts=[];updDraw()}
+$('#mDraw').onclick=()=>{if(!map)return;if(!drawMode&&drawPts.length===0){drawMode=true}else drawMode=!drawMode;map.getContainer().style.cursor=drawMode?'crosshair':'';updDraw()};
+$('#mUndo').onclick=()=>{if(!drawPts.length)return;drawPts.pop();const mk=drawMarkers.pop();map.removeLayer(mk);updDraw()};
+$('#mClear').onclick=()=>{clearDraw();drawMode=true;map.getContainer().style.cursor='crosshair';updDraw()};
+$('#mUse').onclick=()=>{const d=drawnLocal();if(!d||d.pts.length<3){toast('ارسم ثلاث نقاط على الأقل لحدود الأرض.');return}
+  const def=S.projType==='land'?0:10,old=S.verts;S.coordMode='local';S.refLat=+d.lat.toFixed(7);S.refLon=+d.lon.toFixed(7);S.zone=autoZone(d.lon);
+  S.verts=d.pts.map(p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3),sb:S.projType==='land'?0:roleSb('side'),role:'side',name:''}));
+  if(S.img.src!=='upload')S.img.src='esri';S.img.show=true;S.sheet.panX=0;S.sheet.panY=0;S.sheet.scale='auto';
+  drawMode=false;clearDraw();structural();syncInputs();M=compute();
+  const e=M.edges.reduce((a,b)=>b.len>a.len?b:a);let ang=-Math.atan2(e.b.y-e.a.y,e.b.x-e.a.x)*R2D;ang=((ang+90)%180+180)%180-90;S.sheet.vr=Math.round(ang);syncInputs();persist();
+  setView('sheet');toast('اعتُمدت الأرض. اضبط الارتدادات من جدول النقاط.')};
+async function mapSearch(){const q=$('#mSearch').value.trim();if(!q||!map)return;
+  let m2=q.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||q.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/)||q.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,،\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if(m2){map.setView([+m2[1],+m2[2]],18);return}
+  try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ar&q='+encodeURIComponent(q));const j=await r.json();
+    if(j[0]){if(j[0].boundingbox){const b=j[0].boundingbox.map(Number);map.fitBounds([[b[0],b[2]],[b[1],b[3]]],{maxZoom:18})}else map.setView([+j[0].lat,+j[0].lon],17)}else toast('لم أجد هذا المكان. جرّب اسماً آخر أو الإحداثيات.')}
+  catch(e){toast('البحث بالاسم غير متاح هنا. اكتب الإحداثيات مثل 21.54, 39.17.')}}
+$('#mGo').onclick=mapSearch;$('#mSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();mapSearch()}});
+$('#mSearch').addEventListener('input',e=>e.stopPropagation());
+
+/* ---------- import parcels: Shapefile ZIP / GeoJSON / KML / KMZ ---------- */
+let PARCELS=[];
+function parseSHP(buf){const dv=new DataView(buf),out=[];let o=100;
+  while(o+12<=buf.byteLength){const len=dv.getInt32(o+4,false)*2,rs=o+8;if(len<=0||rs+len>buf.byteLength+1)break;const st=dv.getInt32(rs,true);
+    if([3,5,13,15,23,25].includes(st)){const np=dv.getInt32(rs+36,true),n=dv.getInt32(rs+40,true),parts=[];for(let i=0;i<np;i++)parts.push(dv.getInt32(rs+44+4*i,true));
+      const pb=rs+44+4*np,pts=[];for(let i=0;i<n;i++)pts.push({x:dv.getFloat64(pb+16*i,true),y:dv.getFloat64(pb+16*i+8,true)});
+      out.push(parts.map((s0,i)=>pts.slice(s0,i+1<np?parts[i+1]:n)))}else out.push(null);o=rs+len}return out}
+function parseDBF(buf,cpg){const u=new Uint8Array(buf),dv=new DataView(buf),n=dv.getUint32(4,true),hl=dv.getUint16(8,true),rl=dv.getUint16(10,true),fields=[];
+  for(let o=32;o<hl-1&&u[o]!==0x0D;o+=32){let nm='';for(let k=0;k<11&&u[o+k];k++)nm+=String.fromCharCode(u[o+k]);fields.push({name:nm,len:u[o+16]})}
+  let dec;const enc=(cpg||'').trim().toLowerCase();
+  const tryDec=label=>{try{return new TextDecoder(label,{fatal:true})}catch(e){return null}};
+  const dU=tryDec('utf-8'),d1256=tryDec(enc.includes('1256')||enc.includes('arabic')?'windows-1256':'windows-1256')||new TextDecoder();
+  const rows=[];for(let r=0;r<n;r++){let o=hl+r*rl+1;const row={};for(const f of fields){const b=u.subarray(o,o+f.len);let v;
+      if(enc.includes('1256'))v=d1256.decode(b);else{try{v=dU?dU.decode(b):d1256.decode(b)}catch(e){v=d1256.decode(b)}}row[f.name]=v.replace(/\0/g,'').trim();o+=f.len}rows.push(row)}return rows}
+function prjInfo(t){if(!t)return null;const datum=/WGS[_ ]?(19)?84|WGS_1984/i.test(t)?'WGS84':((t.match(/DATUM\["([^"]+)"/i)||[])[1]||'');
+  if(!/PROJCS/i.test(t))return{kind:'geo',datum};
+  let z=t.match(/UTM[_ ]?zone[_ ]?(\d{1,2})\s*N/i)||t.match(/UTM[^"]*?(\d{1,2})N/i);
+  if(!z){const cm=t.match(/Central_Meridian"\s*,\s*(-?[\d.]+)/i),sf=t.match(/Scale_Factor"\s*,\s*([\d.]+)/i);if(cm&&sf&&Math.abs(+sf[1]-0.9996)<1e-6)z=[0,Math.round((+cm[1]+183)/6)]}
+  return z?{kind:'utm',zone:+z[1],datum}:{kind:'unknown',datum}}
+function cleanRing(r){let p=r.slice();if(p.length>1){const a=p[0],b=p.at(-1);if(Math.abs(a.x-b.x)<1e-9&&Math.abs(a.y-b.y)<1e-9)p.pop()}return p}
+function pickLabel(row,i){if(!row)return'قطعة '+(i+1);const keys=Object.keys(row);
+  const pref=keys.find(k=>/parcel|plot|qataa|land_?no|pl_?no|^no$|رقم|قطعة|name/i.test(k)&&row[k]);const v=pref?row[pref]:keys.map(k=>row[k]).find(x=>x);
+  return'قطعة '+(i+1)+(v?' — '+String(v).slice(0,40):'')}
+function ringsFromGeo(geom){if(!geom)return[];if(geom.type==='Polygon')return[geom.coordinates];if(geom.type==='MultiPolygon')return geom.coordinates;
+  if(geom.type==='GeometryCollection')return geom.geometries.flatMap(ringsFromGeo);return[]}
+function largest(rings){return rings.map(cleanRing).filter(r=>r.length>=3).sort((a,b)=>Math.abs(polyArea(b))-Math.abs(polyArea(a)))[0]}
+async function importFile(f){const name=f.name.toLowerCase();let list=[],info='';
+  try{
+    if(name.endsWith('.zip')||name.endsWith('.kmz')){if(!window.JSZip)throw new Error('مكتبة فك الضغط لم تُحمَّل.');const z=await JSZip.loadAsync(f),files=Object.values(z.files).filter(x=>!x.dir&&!/__MACOSX/.test(x.name));
+      const kml=files.find(x=>/\.kml$/i.test(x.name));const shp=files.find(x=>/\.shp$/i.test(x.name));
+      if(shp){const base=shp.name.replace(/\.shp$/i,''),get=ext=>files.find(x=>x.name.toLowerCase()===(base+ext).toLowerCase());
+        const geoms=parseSHP(await shp.async('arraybuffer'));const dbfF=get('.dbf'),prjF=get('.prj'),cpgF=get('.cpg');
+        const rows=dbfF?parseDBF(await dbfF.async('arraybuffer'),cpgF?await cpgF.async('string'):''):[];const prj=prjF?prjInfo(await prjF.async('string')):null;
+        geoms.forEach((g,i)=>{if(!g)return;const ring=largest(g.map(r=>r.map(p=>({x:p.x,y:p.y}))));if(ring)list.push({label:pickLabel(rows[i],list.length),ring,prj})});
+        if(!list.length)throw new Error('ملف SHP لا يحتوي مضلعات.');
+        info=prj?(prj.kind==='utm'?`الإسقاط: UTM نطاق ${prj.zone} شمال`:prj.kind==='geo'?'الإسقاط: إحداثيات جغرافية (درجات)':'إسقاط غير معروف'):'لا يوجد ملف PRJ';
+        if(prj&&prj.datum&&prj.datum!=='WGS84')info+=` · المرجع ${prj.datum}: قد تظهر إزاحة عن الصورة الفضائية (حتى ٢٠٠م مع عين العبد).`}
+      else if(kml){list=parseKML(await kml.async('string'));info='ملف KML'}
+      else throw new Error('لم أجد ملف .shp أو .kml داخل الـ ZIP.')}
+    else if(name.endsWith('.kml')){list=parseKML(await f.text());info='ملف KML'}
+    else{const j=JSON.parse(await f.text());const feats=j.type==='FeatureCollection'?j.features:j.type==='Feature'?[j]:[{type:'Feature',geometry:j,properties:{}}];
+      feats.forEach((ft,i)=>{const ring=largest(ringsFromGeo(ft.geometry).map(poly=>poly[0].map(c2=>({x:+c2[0],y:+c2[1]}))));if(ring)list.push({label:pickLabel(ft.properties,list.length),ring,prj:null})});
+      info='ملف GeoJSON'}
+  }catch(e){toast('تعذّر قراءة الملف: '+(e.message||e));return}
+  if(!list.length){toast('لم أجد أي قطعة (مضلع) في الملف.');return}
+  PARCELS=list;$('#parcelSel').innerHTML=list.map((p,i)=>`<option value="${i}">${esc(p.label)}</option>`).join('');$('#parcelPick').hidden=list.length<2;
+  $('#importInfo').textContent=`${f.name}: ${list.length} قطعة. ${info}`;applyParcel(list[0])}
+function parseKML(txt){const doc=new DOMParser().parseFromString(txt,'application/xml'),out=[];
+  [...doc.getElementsByTagName('Placemark')].forEach(pm=>{const nm=(pm.getElementsByTagName('name')[0]||{}).textContent||'';
+    const polys=[...pm.getElementsByTagName('Polygon')];const rings=polys.map(pg=>{const ob=pg.getElementsByTagName('outerBoundaryIs')[0]||pg;const co=(ob.getElementsByTagName('coordinates')[0]||{}).textContent||'';
+      return co.trim().split(/\s+/).map(t=>t.split(',').map(Number)).filter(a=>a.length>=2&&!isNaN(a[0])).map(a=>({x:a[0],y:a[1]}))});
+    const ring=largest(rings);if(ring)out.push({label:'قطعة '+(out.length+1)+(nm?' — '+nm.trim().slice(0,40):''),ring,prj:{kind:'geo'}})});return out}
+function applyParcel(pc){let kind=pc.prj?.kind,zone=pc.prj?.zone;const r=pc.ring,looksGeo=r.every(p=>Math.abs(p.x)<=180&&Math.abs(p.y)<=90);
+  if(!kind||kind==='unknown'){if(looksGeo)kind='geo';else{kind='utm';zone=clamp(Math.round(+S.zone)||38,1,60);toast(`لا يوجد إسقاط واضح؛ اعتبرت الإحداثيات UTM نطاق ${zone}. غيّره من قسم الإحداثيات إن لزم.`)}}
+  const def=S.projType==='land'?0:roleSb('side');
+  if(kind==='geo'){let la=0,lo=0;r.forEach(p=>{la+=p.y;lo+=p.x});la/=r.length;lo/=r.length;const F=localFrame(la,lo);
+    S.coordMode='local';S.refLat=+la.toFixed(7);S.refLon=+lo.toFixed(7);S.zone=autoZone(lo);
+    S.verts=dedupe(r.map(p=>F.fromLL({lat:p.y,lon:p.x}))).map(p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3),sb:def,role:'side',name:''}))}
+  else{S.coordMode='utm';S.zone=zone;S.verts=dedupe(r).map(p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3),sb:def,role:'side',name:''}))}
+  if(S.img.src!=='upload')S.img.src='esri';S.img.show=true;S.sheet.panX=0;S.sheet.panY=0;S.sheet.scale='auto';
+  structural();syncInputs();M=compute();if(!M.bad){const e=M.edges.reduce((a,b)=>b.len>a.len?b:a);let ang=-Math.atan2(e.b.y-e.a.y,e.b.x-e.a.x)*R2D;ang=((ang+90)%180+180)%180-90;S.sheet.vr=Math.round(ang)}
+  syncInputs();persist();schedule();if(map)showCurrentPlot(true);$('#sbSec').open=true;toast('تم استيراد القطعة. حدّد الارتدادات من قسم «الارتدادات لكل ضلع».')}
+function dedupe(pts){const out=[];pts.forEach(p=>{const q=out.at(-1);if(!q||Math.hypot(p.x-q.x,p.y-q.y)>0.02)out.push(p)});
+  if(out.length>3&&Math.hypot(out[0].x-out.at(-1).x,out[0].y-out.at(-1).y)<0.02)out.pop();
+  for(let k=0;k<out.length&&out.length>3;){const a=out[(k-1+out.length)%out.length],b=out[k],c2=out[(k+1)%out.length];
+    const ar=Math.abs(cross(sub(b,a),sub(c2,b)))/2,base=Math.hypot(c2.x-a.x,c2.y-a.y)||1;if(ar/base<0.01)out.splice(k,1);else k++}return out}
+$('#parcelSel').onchange=e=>{const pc=PARCELS[+e.target.value];if(pc)applyParcel(pc)};
+const pdrop=$('#parcelDrop');pdrop.onclick=()=>$('#parcelFile').click();pdrop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#parcelFile').click()}};
+$('#parcelFile').onchange=e=>{const f=e.target.files[0];if(f)importFile(f);e.target.value=''};
+pdrop.addEventListener('dragover',e=>{e.preventDefault();pdrop.classList.add('on')});pdrop.addEventListener('dragleave',()=>pdrop.classList.remove('on'));
+pdrop.addEventListener('drop',e=>{e.preventDefault();pdrop.classList.remove('on');const f=e.dataTransfer.files[0];if(f)importFile(f)});
+$('#pickImg').onclick=()=>{$('#imgFile').click()};
+$('#demoBtn').onclick=()=>{const d=defaults();Object.assign(S,{coordMode:d.coordMode,zone:d.zone,refLat:d.refLat,refLon:d.refLon,verts:d.verts});S.sheet.vr=d.sheet.vr;S.sheet.panX=0;S.sheet.panY=0;
+  PARCELS=[];$('#parcelPick').hidden=true;$('#importInfo').textContent='';structural();syncInputs();if(map)showCurrentPlot(true)};
+
+/* boot */
+fillScaleSelect();syncInputs();renderVerts();updateModeHint();applyProjType();
+try{const im=localStorage.getItem(STORE_IMG);if(im)loadImage(im,false)}catch(e){}
+try{const tp=localStorage.getItem(STORE_TXP);if(tp)loadTxPhoto(tp,false)}catch(e){}
+render();setView(HAD||IN_CLAUDE?'sheet':'map');
+if(document.fonts){Promise.all(['400','600','700'].map(w=>document.fonts.load(`${w} 16px "IBM Plex Sans Arabic"`,'مسجد'))).then(()=>schedule()).catch(()=>{})}
+</script>
+
+</body>
+</html>
