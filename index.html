@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 </head>
 <body style="margin:0">
-<title>GIS Parcel Planner V5</title>
+<title>GIS Parcel Planner V9 — Transaction Report</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -221,7 +221,7 @@ table.vt{border-collapse:collapse;width:100%;font-size:12px}
     </nav>
     <div class="panel" id="side">
     <header class="phead">
-      <div class="ttl"><h1>GIS Parcel Planner</h1><span class="ver">V5</span></div>
+      <div class="ttl"><h1>GIS Parcel Planner</h1><span class="ver">V9</span></div>
       <div class="proj" id="projName"></div>
       <div class="ptype"><label for="projType">نوع اللوحة</label><select id="projType" data-k="projType"><option value="mosque">مسجد (توزيع كامل)</option><option value="land">أرض فقط (كروكي موقع)</option></select></div>
     </header>
@@ -233,6 +233,7 @@ table.vt{border-collapse:collapse;width:100%;font-size:12px}
         <input type="file" id="parcelFile" accept=".zip,.geojson,.json,.kml,.kmz" hidden>
         <div class="btns"><button id="pickMap">رسم قطعة على الخريطة</button><button id="pickImg">رفع صورة جوية</button><button id="demoBtn">قطعة تجريبية</button></div>
         <div class="row" id="parcelPick" hidden><label for="parcelSel">القطعة المختارة</label><select id="parcelSel"></select></div>
+        <div class="row" id="parcelNoPick" hidden><label for="parcelNoField">حقل رقم القطعة</label><select id="parcelNoField"></select></div>
         <div class="hint" id="importInfo"></div>
       </div>
     </details>
@@ -398,18 +399,45 @@ table.vt{border-collapse:collapse;width:100%;font-size:12px}
     </details>
 
     <details open id="txSec">
-      <summary><span class="no">10</span><span class="tt">نموذج المعاملة</span><small>شكل ثابت</small></summary>
+      <summary><span class="no">10</span><span class="tt">نموذج المعاملة</span><small>تصميم تنظيمي جديد</small></summary>
       <div class="sec">
-        <div class="hint">المساحات وأطوال الأضلاع واتجاه القبلة والارتدادات تُحسب من الأرض: الارتداد الأمامي/الخلفي/الجانبي من وظيفة كل ضلع، واسم الضلع الأمامي يُكتب على الشارع. دوران الأرض في النموذج من «دوران الرسم» في قسم اللوحة.</div>
-        <div class="row wide"><label for="txLoc">موقع الأرض (المدينة › المخطط › الشارع)</label><input id="txLoc" type="text" data-k="tx.loc"></div>
+        <div class="hint">المساحات وأطوال الأضلاع والارتدادات تُحسب من الأرض. اختر «ضلع الشارع» برقمه الظاهر على الخريطة؛ يُرسم عليه الشارع واسمه، وتُدار القطعة في النموذج بحيث يكون الشارع لأسفل (مع سهم شمال).</div>
+        <div class="row2">
+          <div><label for="txParcel">رقم القطعة</label><input id="txParcel" type="text" data-k="tx.parcelNo" placeholder="غير محدد في ملف GIS — اكتبه يدويًا"></div>
+          <div><label for="txPlan">رقم المخطط</label><input id="txPlan" type="text" data-k="tx.planNo" placeholder="رقم المخطط"></div>
+        </div>
+        <div class="hint" id="txGisNo">لا يوجد حقل لرقم القطعة في الملف؛ اكتب الرقم يدويًا.</div>
+        <div class="row wide"><label for="txStreetW">عرض الشارع (م)</label><input id="txStreetW" type="text" inputmode="decimal" dir="ltr" data-k="tx.streetW" placeholder="مثال: 20"></div>
+        <div class="hint" id="txFrontInfo">أدخل عرض الشارع ليُحسب الارتداد الأمامي تلقائيًا (عرض الشارع ÷ 5، بحد أدنى 3 م).</div>
+        <div class="row wide"><label for="txStreet">اسم الشارع (يُكتب على واجهة الشارع في الخريطتين)</label><input id="txStreet" type="text" data-k="tx.street" placeholder="فارغ = اسم الضلع الأمامي أو اسم الشارع من ملف GIS"></div>
+        <div class="row2">
+          <div><label for="txStreetEdge">ضلع الشارع (نفس رقم الضلع على الخريطة)</label><select id="txStreetEdge" data-k="tx.streetEdge"><option value="">تلقائي (الضلع الأمامي)</option></select></div>
+          <div><label for="txRot">تدوير يدوي (درجة)</label><input id="txRot" type="number" step="1" min="-180" max="180" data-k="tx.rot"></div>
+          <div><label for="txOrient">اتجاه رسم القطعة</label><select id="txOrient" data-k="tx.orient"><option value="street">الشارع لأسفل</option><option value="north">الشمال لأعلى</option><option value="sheet">نفس دوران اللوحة</option></select></div>
+        </div>
+        <div class="row wide"><label for="txAuthority">الجهة / عنوان رأس النموذج (لا يدل على اعتماد رسمي)</label><input id="txAuthority" type="text" data-k="tx.authority" placeholder="GIS Parcel Planner"></div>
+        <div class="row wide"><label for="txLoc">سطر الموقع (المدينة › المخطط)</label><input id="txLoc" type="text" data-k="tx.loc" placeholder="مثال: مكة المكرمة › مخطط حي الرصيفة الجديد"></div>
+        <div class="sub">بيانات كارت القطعة</div>
+        <div class="row2">
+          <div><label for="txPlanName">اسم المخطط</label><input id="txPlanName" type="text" data-k="tx.planName" placeholder="اسم المخطط"></div>
+          <div><label for="txDistrict">اسم الحي</label><input id="txDistrict" type="text" data-k="tx.district" placeholder="اسم الحي"></div>
+          <div><label for="txMuni">اسم البلدية</label><input id="txMuni" type="text" data-k="tx.municipality" placeholder="اسم البلدية"></div>
+          <div><label for="txPlanUse">استخدام المخطط</label><input id="txPlanUse" type="text" data-k="tx.planUse" placeholder="مثال: سكني"></div>
+          <div><label for="txSubUse">الاستخدام الفرعي للقطعة</label><input id="txSubUse" type="text" data-k="tx.subUse" placeholder="مثال: عمارة سكنية"></div>
+          <div><label for="txParcelUse">استخدام القطعة</label><input id="txParcelUse" type="text" data-k="tx.parcelUse" placeholder="فارغ = نوع المبنى"></div>
+          <div><label for="txConflict">وجود تعارض</label><input id="txConflict" type="text" data-k="tx.conflict" placeholder="مثال: لا يوجد"></div>
+        </div>
+        <div class="hint">الحقول الفارغة تُؤخذ من خصائص ملف GIS المستورد إن وُجدت، وإلا تظهر «—» في النموذج.</div>
         <div class="row2">
           <div><label for="txType">نوع المبنى المسموح</label><input id="txType" type="text" data-k="tx.bType"></div>
           <div><label for="txFloors">أقصى عدد أدوار</label><input id="txFloors" type="text" data-k="tx.floors" placeholder="-"></div>
-          <div><label for="txHeight">أقصى ارتفاع م</label><input id="txHeight" type="text" data-k="tx.height" placeholder="-"></div>
+          <div><label for="txHeight">أقصى ارتفاع م</label><input id="txHeight" type="text" data-k="tx.height" placeholder="تلقائي: 4.30 + الأدوار"></div>
           <div><label for="txRatio">نسبة البناء ٪</label><input id="txRatio" type="number" step="1" min="0" max="100" data-k="tx.ratio"></div>
           <div><label for="txFar">معامل البناء FAR</label><input id="txFar" type="text" data-k="tx.far" placeholder="-"></div>
           <div><label for="txPark">المواقف ٪ من الأرض</label><input id="txPark" type="number" step="1" min="0" max="100" data-k="tx.parkPct"></div>
         </div>
+        <div class="row wide"><label for="txFloorDesc">توصيف الأدوار</label><input id="txFloorDesc" type="text" data-k="tx.floorDesc" placeholder="مثال: أرضي + 3 متكررة (بحسب المستند الرسمي)"></div>
+        <div class="hint">تنبيه: قيم نسبة البناء، معامل البناء، عدد الأدوار والمواقف بيانات نظامية تدخلها أنت من مصدرها الرسمي؛ لا يستنتجها البرنامج من شكل القطعة.</div>
         <div class="row wide"><label for="txParkTxt">اشتراطات مواقف السيارات</label><input id="txParkTxt" type="text" data-k="tx.parkTxt"></div>
         <div class="row wide"><label for="txUses">الاستخدامات المسموح بها</label><input id="txUses" type="text" data-k="tx.uses"></div>
         <div class="row wide"><label for="txNot">الاستخدامات غير المسموح بها</label><input id="txNot" type="text" data-k="tx.notUses"></div>
@@ -417,7 +445,15 @@ table.vt{border-collapse:collapse;width:100%;font-size:12px}
         <div class="row2">
           <div><label for="txArchLbl">عنوان بند العمارة</label><input id="txArchLbl" type="text" data-k="tx.archLbl"></div>
           <div><label for="txArch">اشتراطات العمارة</label><input id="txArch" type="text" data-k="tx.arch"></div>
+          <div><label for="txUrban">النطاق العمراني (داخل / خارج)</label><input id="txUrban" type="text" data-k="tx.urban"></div>
+          <div><label for="txStatus">حالة القطعة</label><input id="txStatus" type="text" data-k="tx.status"></div>
         </div>
+        <div class="row wide"><label for="txNotes">الملاحظات</label><input id="txNotes" type="text" data-k="tx.notes"></div>
+        <div class="sub">صورة اللوجو (أعلى يمين النموذج)</div>
+        <div class="drop" id="txLogoDrop" tabindex="0" role="button">اسحب صورة اللوجو هنا أو اضغط لاختيارها (PNG بخلفية شفافة أفضل)</div>
+        <input type="file" id="txLogoFile" accept="image/*" hidden>
+        <div class="hint" id="txLogoInfo">لا يوجد لوجو؛ يظهر مكانه إطار فارغ في النموذج.</div>
+        <div class="btns"><button class="sm" id="txLogoClear">إزالة اللوجو</button></div>
         <div class="row wide"><label for="txAdv">الميزة التخطيطية</label><textarea id="txAdv" data-k="tx.adv"></textarea></div>
         <div class="row2">
           <label class="chk"><input type="checkbox" id="txQibla" data-k="tx.qibla"> اتجاه القبلة</label>
@@ -427,8 +463,14 @@ table.vt{border-collapse:collapse;width:100%;font-size:12px}
         <div class="drop" id="txDrop" tabindex="0" role="button">اسحب صورة الموقع هنا أو اضغط لاختيارها</div>
         <input type="file" id="txFile" accept="image/*" hidden>
         <div class="hint" id="txPhotoInfo">لا توجد صورة بعد.</div>
-        <div class="hint">الصورة تملأ عرض الإطار، وإن كانت أطول منه تُقص من أعلاها فقط، فيبقى الشريط السفلي والـ QR كما هما.</div>
-        <label class="chk"><input type="checkbox" id="txStrip" data-k="tx.qrStrip"> إضافة شريط QR وخريطة أسفل الصورة (لصورة بدون QR)</label>
+        <div class="hint">بدون صورة باركود منفصلة: الصورة تأخذ إطار التوثيق كله وتظهر كاملة بدون أي قص، بما فيها شريط الباركود إن كان جزءًا منها. مع صورة باركود منفصلة: تظهر الصورة أعلى الإطار والباركود أسفلها.</div>
+        <div class="sub">صورة الباركود / QR الجاهزة (أسفل صورة الموقع)</div>
+        <div class="drop" id="txBarDrop" tabindex="0" role="button">اسحب صورة كارت الباركود الجاهزة هنا أو اضغط لاختيارها</div>
+        <input type="file" id="txBarFile" accept="image/*" hidden>
+        <div class="hint" id="txBarInfo">لا توجد صورة باركود؛ يظهر مكانها إطار فارغ في النموذج.</div>
+        <div class="hint">تُوضع كما هي بعرض الإطار ونسبتها الأصلية أسفل صورة الموقع. إن كانت الصورة تحتوي الموقع والباركود معًا فستملأ الإطار كله.</div>
+        <div class="btns"><button class="sm" id="txBarClear">إزالة صورة الباركود</button></div>
+        <label class="chk"><input type="checkbox" id="txStrip" data-k="tx.qrStrip"> توليد شريط QR وخريطة تلقائيًا (فقط عند عدم رفع صورة باركود جاهزة)</label>
         <div id="txStripBox" class="sec" hidden>
           <div class="row wide"><label for="txCap">نص الشريط (سطر لكل معلومة)</label><textarea id="txCap" data-k="tx.cap"></textarea></div>
           <div class="row wide"><label for="txQr">رابط الـ QR</label><input id="txQr" type="text" dir="ltr" data-k="tx.qr" placeholder="تلقائي: Google Maps من إحداثيات الأرض"></div>
@@ -463,7 +505,7 @@ table.vt{border-collapse:collapse;width:100%;font-size:12px}
         <div class="hint" id="dlNote" hidden>حفظ الملفات غير متاح في هذا العرض. افتح الصفحة من claude.ai للتنزيل.</div>
       </div>
     </details>
-    <div class="pfoot">GIS PARCEL PLANNER · V5 · WGS 84 / UTM</div>
+    <div class="pfoot">GIS PARCEL PLANNER · V9 · WGS 84 / UTM</div>
     </div>
   </aside>
 
@@ -490,6 +532,9 @@ table.vt{border-collapse:collapse;width:100%;font-size:12px}
 <div class="bmodal" id="bldModal" hidden role="dialog" aria-modal="true" aria-labelledby="bldHead">
   <div class="bcard">
     <div class="bhead"><b id="bldHead">معاينة مخطط المساحة بعد الارتدادات</b><button class="sm" id="bldClose" aria-label="إغلاق">×</button></div>
+    <div class="row wide" id="bldTitleRow" hidden><label for="bldTitleIn">عنوان المخطط (اكتبه يدويًا؛ يتغير في الصورة مباشرة)</label><input id="bldTitleIn" type="text"></div>
+    <div class="row wide" id="txRotRow" hidden><label for="txRotR">تدوير القطعة يدويًا: <b id="txRotV">0°</b> (يمين = عكس عقارب الساعة)</label>
+      <div class="btns"><input id="txRotR" type="range" min="-180" max="180" step="1" style="flex:1"><input id="txRotN" type="number" min="-180" max="180" step="1" style="width:80px"><button class="sm" id="txRotRef">مائل مثل المرجع</button><button class="sm" id="txRot0">بدون تدوير</button></div></div>
     <div class="bimg"><img id="bldImg" alt="مخطط المساحة القابلة للبناء بعد الارتدادات"></div>
     <div class="hint" id="bldInfo"></div>
     <div class="btns"><button class="pri" id="bldSave">تنزيل PNG</button><button id="bldPdf" hidden>تنزيل PDF</button><button id="bldCancel">إغلاق</button></div>
@@ -535,11 +580,13 @@ function defaults(){
     tb:{office:'Drconsultancy',officeSub:'استشارات هندسية',project:'مسجد جامع (مثال)',client:'',location:'',title:'المخطط العام — توزيع الموقع',no:'A-01',rev:'0',date:today(),drawn:'',checked:'',
       notes:'الأبعاد بالمتر.\nاتجاه القبلة محسوب من إحداثيات الموقع على الشمال الحقيقي.\nالمخطط مبدئي للدراسة ويخضع لاشتراطات الجهات المختصة.'},
     exp:{dpi:200,coords:'utm',dxfLang:'ar'},bld:{title:'',maxRatio:''},
-    tx:{loc:'مكة المكرمة › مخطط العسيلة › الطريق الدائري الرابع',bType:'خدمات دينية',floors:'-',height:'18',ratio:60,far:'',parkPct:20,
-      parkTxt:'20% من مساحة الموقع (مواقف سطحية وحافلات)',uses:'ديني - اجتماعي - ثقافي - تجاري - سكن المؤذن والامام',notUses:'جميع الاستخدامات الأخرى',
-      special:'يسمح بالاستخدامات التجارية بحد أقصى 8 أدوار.',archLbl:'اشتراطات عمارة مكة',arch:'مصدر العمارة التقليدية',
-      adv:'يتميز الموقع بوجوده داخل حد الحرم الشرعي ويخدم القادمين من طريق الملك فيصل بن عبدالعزيز (السيل) وطريق مكة - المدينة المنورة.',
-      cap:'الطريق الدائري الرابع\nحي وادي جليل\nأمانة العاصمة المقدسة',qr:'',qrStrip:false,qibla:true,north:true}};
+    tx:{parcelNo:'',planNo:'',authority:'',floorDesc:'',loc:'',bType:'',floors:'',height:'',ratio:'',far:'',parkPct:'',
+      parkTxt:'',uses:'',notUses:'',
+      special:'',archLbl:'اشتراطات العمارة',arch:'',
+      adv:'',
+      cap:'',qr:'',qrStrip:false,qibla:true,north:true,
+      street:'',streetW:'',streetEdge:'',orient:'street',rot:0,planName:'',district:'',municipality:'',planUse:'',subUse:'',parcelUse:'',conflict:'',urban:'',status:'',notes:''},
+    gis:{no:'',noKey:'',street:'',planName:'',planNo:'',district:'',muni:'',use:''},gisNoField:''};
 }
 function merge(d,s){if(!s||typeof s!=='object')return d;for(const k in d){if(s[k]===undefined)continue;
   if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k]))d[k]=merge(d[k],s[k]);else d[k]=s[k]}return d}
@@ -865,7 +912,11 @@ function drawSheet(ctx,ppm,m){const pc=c,pk=K;c=ctx;K=ppm;const{W,H}=paperDims()
 /* ---------- preview ---------- */
 const cv=$('#cv'),desk=$('#desk');let raf=0;
 function schedule(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render()})}
-function render(){M=compute();const{W,H}=paperDims(),dpr=window.devicePixelRatio||1,avail=Math.max(200,desk.clientWidth-36),availH=Math.max(200,desk.clientHeight-36);
+// street-edge choices follow the current parcel (rebuilt only when edges change)
+function txEdgeOptions(){const sel=$('#txStreetEdge');if(!sel||!M||M.bad)return;const sig=M.edges.map(e=>e.len.toFixed(2)+e.name).join('|');if(sel.dataset.sig===sig)return;sel.dataset.sig=sig;
+  sel.innerHTML='<option value="">تلقائي (الضلع الأمامي)</option>'+M.edges.map((e,i)=>`<option value="${i}">ضلع ${i+1} — ${nE(e.len,2)} م${e.name?' — '+esc(e.name):''}</option>`).join('');
+  sel.value=String(S.tx.streetEdge??'');if(sel.value!==String(S.tx.streetEdge??'')){S.tx.streetEdge='';sel.value=''}}
+function render(){M=compute();txEdgeOptions();const{W,H}=paperDims(),dpr=window.devicePixelRatio||1,avail=Math.max(200,desk.clientWidth-36),availH=Math.max(200,desk.clientHeight-36);
   let cssW=Math.min(avail,availH*W/H*(window.innerWidth<=900?10:1));cssW=Math.max(260,cssW)*zoom;const cssH=cssW*H/W;
   let pxW=cssW*dpr,pxH=cssH*dpr;const cap=14e6;if(pxW*pxH>cap){const f=Math.sqrt(cap/(pxW*pxH));pxW*=f;pxH*=f}
   cv.style.width=cssW+'px';cv.style.height=cssH+'px';cv.width=Math.round(pxW);cv.height=Math.round(pxH);
@@ -918,6 +969,7 @@ $('#side').addEventListener('input',e=>{const el=e.target;
   if(el.dataset.k){let v;if(el.type==='checkbox')v=el.checked;else if(el.type==='number'||el.type==='range'){v=parseFloat(el.value);if(isNaN(v))return}else v=el.value;
     if(el.dataset.k==='sheet.scale')v=el.value==='auto'?'auto':+el.value;if(el.dataset.k==='parkEdge'||el.dataset.k==='exp.dpi')v=+el.value;
     setP(S,el.dataset.k,v);if(el.dataset.k==='cap')$('#capR').value=v;
+    if(el.dataset.k==='tx.streetW'||el.dataset.k==='tx.streetEdge')txApplyFront();if(el.dataset.k==='tx.floors')txHints();
     if(el.dataset.k==='coordMode'){convertMode(v);return}
     if(['cap','womenPct','aPer','hallRatio','sahnRatio','ablPer','minaret','minSide','minSize','housing','housingArea','qAuto','qManual'].includes(el.dataset.k)&&M&&!M.bad){/* keep positions */}
     if(el.dataset.k==='img.drag')updateModeHint();if(el.dataset.k==='tx.qrStrip')$('#txStripBox').hidden=!v;persist();schedule();return}
@@ -1114,15 +1166,19 @@ function setbackStrips(m){const P=m.P,n=P.length,E=m.edges,out=[];
     out.push(w.filter((p,k)=>k===0||(Math.hypot(p.x-w[k-1].x,p.y-w[k-1].y)>1e-9&&Math.hypot(p.x-v.x,p.y-v.y)>1e-9)))}
   return out.filter(q=>q.length>=3&&Math.abs(polyArea(q))>1e-6)}
 function buildableGeom(m){const R=q=>[q.map(p=>[p.x,p.y])],strips=setbackStrips(m);let parts=null,method='clip';
-  if(window.polygonClipping){try{const res=strips.length?polygonClipping.difference(R(m.P),...strips.map(R)):[R(m.P)];
-    parts=res.map(pg=>pg.map(r=>cleanRing(r.map(([x,y])=>({x,y}))))).filter(pg=>pg[0].length>=3&&Math.abs(polyArea(pg[0]))>0.01)}catch(e){parts=null}}
+  // polygon-clipping can throw "Unable to complete output ring" on near-degenerate float input; retry on a fine snap grid (≤1 mm)
+  if(window.polygonClipping)for(const g of [0,1e-6,1e-4,1e-3]){const sn=g?q=>q.map(p=>({x:Math.round(p.x/g)*g,y:Math.round(p.y/g)*g})):q=>q;
+    try{const res=strips.length?polygonClipping.difference(R(sn(m.P)),...strips.map(q=>R(sn(q)))):[R(m.P)];
+      parts=res.map(pg=>pg.map(r=>cleanRing(r.map(([x,y])=>({x,y}))))).filter(pg=>pg[0].length>=3&&Math.abs(polyArea(pg[0]))>0.01);
+      // a silently empty (or oversized) result while the offset outline is valid is a clipping failure too
+      const ga=parts.reduce((t,pg)=>t+Math.abs(polyArea(pg[0])),0);if((!parts.length&&m.bOk)||ga>m.plotArea+0.01){parts=null;continue}break}catch(e){parts=null}}
   if(!parts){method='offset';parts=m.bOk?[[m.B]]:(m.hasSb?[]:[[m.P]])}
   const ar=pg=>Math.abs(polyArea(pg[0]))-pg.slice(1).reduce((s,h)=>s+Math.abs(polyArea(h)),0);
   parts=parts.map(pg=>({rings:pg,area:ar(pg)})).sort((a,b)=>b.area-a.area);
   return{parts,area:parts.reduce((s,p)=>s+p.area,0),method}}
-function bldTitle(m){if(String(S.bld.title||'').trim())return S.bld.title.trim();
+function bldTitle(m,auto){if(!auto&&String(S.bld.title||'').trim())return S.bld.title.trim();
   const fr=m.edges.filter((e,i)=>e.name&&(S.verts[i].role||'side')==='front').map(e=>e.name.trim()),all=fr.length?fr:m.edges.map(e=>e.name.trim()).filter(Boolean);
-  return[...new Set(all)].join(' – ')||S.tb.location||S.tb.project||'المساحة القابلة للبناء'}
+  return[...new Set(all)].join(' – ')||txVal(S.tx.street,S.gis&&S.gis.street,S.tb.location)||'المساحة القابلة للبناء'}
 function bldRegRatio(){const s=String(S.bld.maxRatio??'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[٫,]/,'.').replace(/[%٪\s]/g,'');const v=parseFloat(s);return isFinite(v)&&v>0?v:null}
 const bNum=v=>{const r=Math.round(v*100)/100;return fmt(r,r%1?(Math.round(r*10)/10===r?1:2):0)};
 const bPct=v=>fmt(v,v<10&&v%1?1:0)+(S.sheet.digits==='arab'?'٪':'%');
@@ -1215,20 +1271,26 @@ function drawBuildable(m,geo){
 
 let BLD_OUT=null;
 function closeBld(){$('#bldModal').hidden=true;if(BLD_OUT&&BLD_OUT.url)URL.revokeObjectURL(BLD_OUT.url);BLD_OUT=null}
-$('#xBld').onclick=async()=>{M=compute();if(M.bad){toast('أدخل حدود الأرض أولاً.');return}
+// refresh=true redraws inside the open preview (title typed there) without closing it or moving the focus
+async function bldOpen(refresh){M=compute();if(M.bad){toast('أدخل حدود الأرض أولاً.');return}
   const geo=buildableGeom(M);
   if(!geo.parts.length){toast(M.hasSb?'الارتدادات تستهلك كامل مساحة الأرض؛ لا توجد مساحة قابلة للبناء.':'تعذّر حساب المساحة القابلة للبناء.');return}
-  toast('جارٍ تجهيز المخطط…');
+  if(!refresh)toast('جارٍ تجهيز المخطط…');
   try{if(document.fonts)await Promise.all(['400','500','600','700'].map(w=>document.fonts.load(`${w} 16px "IBM Plex Sans Arabic"`,'المساحة ١٢٣')))}catch(e){}
   const out=drawBuildable(M,geo),blob=await new Promise(r=>out.cv.toBlob(r,'image/png'));
-  closeBld();BLD_OUT={blob,url:URL.createObjectURL(blob),name:baseName()+'_buildable-area.png'};
+  if(refresh){if(BLD_OUT&&BLD_OUT.url)URL.revokeObjectURL(BLD_OUT.url)}else closeBld();
+  BLD_OUT={blob,url:URL.createObjectURL(blob),name:baseName()+'_buildable-area.png'};
+  const ti=$('#bldTitleIn');$('#bldTitleRow').hidden=false;$('#txRotRow').hidden=true;ti.placeholder=`فارغ = تلقائي: ${bldTitle(M,true)}`;if(!refresh)ti.value=S.bld.title||'';
   $('#bldHead').textContent='معاينة مخطط المساحة بعد الارتدادات';$('#bldPdf').hidden=true;
   $('#bldImg').src=BLD_OUT.url;
   $('#bldInfo').textContent=`المساحة القابلة للبناء ${fmtU(geo.area,2)} م² من ${fmtU(M.plotArea,2)} م² (هندسياً ${fmtU(out.geom,1)}٪)`+
     (out.reg!=null?` · النسبة النظامية ${fmtU(out.reg,1)}٪ ⇒ أقصى مسطح أرضي ${fmtU(Math.min(geo.area,M.plotArea*out.reg/100),2)} م²`:' · لم تُحدَّد نسبة نظامية')+
     (geo.parts.length>1?` · ${geo.parts.length} أجزاء`:'')+` · ${out.W}×${out.H} بكسل × ${out.pr}`+
-    (geo.method==='offset'?' · تنبيه: مكتبة القص الهندسي لم تُحمَّل؛ استُخدم خط الارتداد التقريبي.':'');
-  $('#bldModal').hidden=false;$('#bldSave').focus()};
+    (geo.method==='offset'?' · تنبيه: تعذّر القص الهندسي الدقيق (أو لم تُحمَّل مكتبته)؛ استُخدم خط الارتداد التقريبي.':'');
+  if(!refresh){$('#bldModal').hidden=false;$('#bldSave').focus()}}
+$('#xBld').onclick=()=>bldOpen(false);
+let BLD_T=0;$('#bldTitleIn').addEventListener('input',e=>{S.bld.title=e.target.value;$('#bTitle').value=e.target.value;persist();
+  clearTimeout(BLD_T);BLD_T=setTimeout(()=>{if(!$('#bldModal').hidden&&!$('#bldTitleRow').hidden)bldOpen(true)},250)});
 $('#bldSave').onclick=()=>{if(BLD_OUT)saveFile(BLD_OUT.name,BLD_OUT.blob)};
 $('#bldClose').onclick=closeBld;$('#bldCancel').onclick=closeBld;
 $('#bldModal').addEventListener('click',e=>{if(e.target.id==='bldModal')closeBld()});
@@ -1239,7 +1301,7 @@ const STORE_TXP='gis-parcel-planner-tx-photo-v1';let TXIMG=null,TXDATA=null;
 const TX={green:'#1d6b4a',dark:'#1f2421',muted:'#7a7a7a',line:'#dfe3e1',panel:'#f7f8f7',band:'#cdc4b5',bandS:'#b5ab9a',inner:'#dcefe3',road:'#9e9e9e',qibla:'#e8833a',box:'#f3ede2',head:'#1d5e3f',dim:'#9a9a9a'};
 const nE=(v,d=0)=>new Intl.NumberFormat('en-US',{maximumFractionDigits:d}).format(v);
 function txSetbacks(m){const r={front:[],rear:[],side:[]};m.edges.forEach((e,i)=>{const k=S.verts[i].role||'side';if(r[k])r[k].push(e.sb)});
-  const f=a=>a.length?nE(Math.max(...a),2):'-';return{front:f(r.front),rear:f(r.rear),side:f(r.side)}}
+  const f=a=>a.length?[...new Set(a.map(v=>Math.round(v*100)/100))].map(v=>nE(v,2)).join('، '):'—';return{front:f(r.front),rear:f(r.rear),side:f(r.side)}}
 function txLink(m){const u=String(S.tx.qr||'').trim();if(u)return u;const ll=toLL(m.geo,centroid(m.P));return`https://www.google.com/maps?q=${ll.lat.toFixed(6)},${ll.lon.toFixed(6)}`}
 function txMiniTile(m){const ll=toLL(m.geo,centroid(m.P)),z=16,fx=lx(ll.lon,z),fy=ly(ll.lat,z);return{t:tileImg(z,Math.floor(fx),Math.floor(fy)),px:(fx%1)*256,py:(fy%1)*256}}
 function txPole(P){const b=bbox(P),st=Math.max(1,Math.min(b.x1-b.x0,b.y1-b.y0)/30),dd=p=>Math.min(...P.map((q,i)=>distSeg(p,q,P[(i+1)%P.length])));let best=null,bd=-1;
@@ -1249,106 +1311,300 @@ function drawQR(x,text,X,Y,sz){x.fillStyle='#fff';x.fillRect(X,Y,sz,sz);
   if(!window.qrcode){x.strokeStyle='#bbb';x.strokeRect(X,Y,sz,sz);x.fillStyle='#999';x.font=`600 11px ${FONT}`;x.textAlign='center';x.textBaseline='middle';x.fillText('QR',X+sz/2,Y+sz/2);return false}
   const q=qrcode(0,'M');q.addData(text);q.make();const n=q.getModuleCount(),c=sz/(n+2);x.fillStyle='#000';
   for(let r=0;r<n;r++)for(let k=0;k<n;k++)if(q.isDark(r,k))x.fillRect(X+c*(k+1),Y+c*(r+1),c+0.05,c+0.05);return true}
+/* ---------- transaction V9: reproducible calculations and official-style (unofficial) layout ---------- */
+function txNumber(v){
+  const s=String(v??'').trim().replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[۰-۹]/g,c=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/[٫]/g,'.').replace(/،/g,'.').replace(/,/g,'').replace(/[%٪\s]/g,'');
+  if(!s||!/^[-+]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(s))return null;
+  const n=Number(s);return Number.isFinite(n)?n:null;
+}
+/* auto rules: max height = 4.30 + max floors; front setback = street width / 5, at least 3 m */
+const TX_H0=4.30,TX_FRONT_DIV=5,TX_FRONT_MIN=3;
+function txAutoHeight(fl){return fl!==null&&Number.isInteger(fl)&&fl>0?+(TX_H0+fl).toFixed(2):null}
+function txFrontSb(w){const v=txNumber(w);return v!==null&&v>0?+Math.max(TX_FRONT_MIN,v/TX_FRONT_DIV).toFixed(2):null}
+// street edge(s): the one chosen in the transaction settings, else the edges marked "front"
+function txStreetEdges(){const n=S.verts.length,se=parseInt(S.tx.streetEdge,10);if(Number.isInteger(se)&&se>=0&&se<n)return[se];return S.verts.map((v,i)=>i).filter(i=>(S.verts[i].role||'side')==='front')}
+function txApplyFront(){const sb=txFrontSb(S.tx.streetW);txHints();if(sb===null)return;const es=txStreetEdges();
+  if(!es.length){toast('اختر «ضلع الشارع» ليُطبَّق عليه الارتداد الأمامي.');return}
+  es.forEach(i=>{S.verts[i].sb=sb;S.verts[i].role='front'});renderVerts();toast(`الارتداد الأمامي = ${nE(sb,2)} م على ضلع ${es.map(i=>i+1).join('، ')}`)}
+function txHints(){const h=$('#txHeight'),f=txAutoHeight(txNumber(S.tx.floors));if(h)h.placeholder=f!==null?`تلقائي: ${nE(f,2)}`:'تلقائي: 4.30 + الأدوار';
+  const w=$('#txFrontInfo'),sb=txFrontSb(S.tx.streetW);if(w)w.textContent=sb!==null?`الارتداد الأمامي = عرض الشارع ÷ 5 = ${nE(Math.max(0,txNumber(S.tx.streetW)/5),2)} م ← يُطبَّق ${nE(sb,2)} م (حد أدنى 3 م) على ضلع الشارع.`:'أدخل عرض الشارع ليُحسب الارتداد الأمامي تلقائيًا (عرض الشارع ÷ 5، بحد أدنى 3 م).'}
+function txCalc(m,geo,tx){
+  const A=m.plotArea,G=geo.area;
+  const ratio=txNumber(tx.ratio),far=txNumber(tx.far),floors=txNumber(tx.floors),park=txNumber(tx.parkPct);
+  const hMan=txNumber(tx.height),height=hMan!==null?hMan:txAutoHeight(floors),heightAuto=hMan===null&&height!==null;
+  const validRatio=ratio!==null&&ratio>0&&ratio<=100;
+  const validFar=far!==null&&far>0;
+  const validFloors=floors!==null&&Number.isInteger(floors)&&floors>0;
+  const validParking=park!==null&&park>=0&&park<=100;
+  const envelopeOK=geo.method==='clip'||(!m.hasSb&&Math.abs(G-A)<0.01)||(m.convex&&geo.method==='offset'&&m.bOk);
+  const coverage=validRatio?A*ratio/100:null;
+  const footprint=validRatio&&envelopeOK?Math.min(G,coverage):null;
+  const byFloors=footprint!==null&&validFloors?footprint*floors:null;
+  const byFAR=validFar?A*far:null;
+  const gross=byFloors!==null&&byFAR!==null?Math.min(byFloors,byFAR):null;
+  const parkingArea=validParking?A*park/100:null;
+  const notes=[];
+  if(!envelopeOK)notes.push('هندسة الارتدادات تحتاج تحققًا؛ المساحة غير مؤكدة');
+  if(!validRatio)notes.push('نسبة البناء النظامية غير محددة أو غير صالحة');
+  if(!validFloors)notes.push('عدد الأدوار غير محدد أو غير صحيح');
+  if(!validFar)notes.push('معامل البناء FAR غير محدد');
+  if(ratio!==null&&!validRatio)notes.push('نسبة البناء يجب أن تكون أكبر من صفر وحتى 100٪');
+  if(park!==null&&!validParking)notes.push('نسبة المواقف يجب أن تكون بين صفر و100٪');
+  if(validRatio&&G+0.01<coverage)notes.push('الارتدادات تحدّ مسطح الدور قبل نسبة البناء');
+  return{A,G,ratio,far,floors,height,heightAuto,park,validRatio,validFar,validFloors,validParking,envelopeOK,coverage,footprint,byFloors,byFAR,gross,parkingArea,notes};
+}
+
+/* layout is drawn in the reference's own pixel grid (card 1310×732 at 5,25) and scaled onto the 1800×1020 sheet */
+function txVal(...a){for(const v of a){const s=String(v??'').trim();if(s)return s}return''}
 function drawTx(m,geo,mini){
-  const W=1800,H=800,pr=2,cv2=document.createElement('canvas');cv2.width=W*pr;cv2.height=H*pr;const x=cv2.getContext('2d');x.scale(pr,pr);
-  const F=(f,w)=>`${w} ${f}px ${FONT}`,mw=(s,f,w=400)=>{x.font=F(f,w);x.direction='rtl';return x.measureText(s).width};
-  const T=(s,X,Y,f,w,col,al='center',a=0)=>{x.save();x.font=F(f,w);x.fillStyle=col;x.textAlign=al;x.textBaseline='middle';x.direction='rtl';x.translate(X,Y);if(a)x.rotate(a);x.fillText(s,0,0);x.restore()};
-  const fitF=(s,f,maxW,w=400)=>{while(f>9&&mw(s,f,w)>maxW)f-=0.5;return f};
-  const rr=(X,Y,w,h,r)=>{x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath()};
-  const hl=(x0,x1,y)=>{x.beginPath();x.moveTo(x0,y);x.lineTo(x1,y);x.strokeStyle='#e6e9e7';x.lineWidth=1;x.stroke()};
-  const wrapL=(s,f,maxW)=>{const out=[];String(s||'').split('\n').forEach(par=>{let line='';par.split(/\s+/).forEach(word=>{const t=line?line+' '+word:word;if(mw(t,f)>maxW&&line){out.push(line);line=word}else line=t});out.push(line)});return out};
-  const pin=(X,Y,r,col)=>{x.beginPath();x.arc(X,Y-r*0.35,r*0.62,Math.PI*0.85,Math.PI*0.15);x.lineTo(X,Y+r);x.closePath();x.fillStyle=col;x.fill();x.beginPath();x.arc(X,Y-r*0.35,r*0.24,0,Math.PI*2);x.fillStyle=col==='#fff'?TX.head:'#fff';x.fill()};
-  const nrm=v=>mul(v,1/(Math.hypot(v.x,v.y)||1));
-  const tx=S.tx,area=m.plotArea,ratio=+tx.ratio||0,far=parseFloat(tx.far),hasFar=isFinite(far)&&far>0,total=hasFar?area*far:area*ratio/100,pp=+tx.parkPct||0,sb=txSetbacks(m);
-  x.fillStyle='#ffffff';x.fillRect(0,0,W,H);x.fillStyle=TX.panel;x.fillRect(900,0,W-900,H);x.fillStyle='#e6e9e7';x.fillRect(899,0,1,H);
+  const W=1800,H=1020,pr=2,canvas=document.createElement('canvas');canvas.width=W*pr;canvas.height=H*pr;
+  const x=canvas.getContext('2d');x.scale(pr,pr);
+  const font=(sz,weight=400)=>`${weight} ${sz}px ${FONT}`;
+  const width=(s,sz,weight=400)=>{x.font=font(sz,weight);return x.measureText(String(s??'')).width};
+  const fit=(s,sz,max,weight=400)=>{while(sz>7&&width(s,sz,weight)>max)sz-=.5;return sz};
+  const text=(s,X,Y,sz=17,weight=400,col='#274238',align='right',rotation=0,dir='rtl')=>{x.save();x.font=font(sz,weight);x.fillStyle=col;x.textAlign=align;x.textBaseline='middle';x.direction=dir;x.translate(X,Y);if(rotation)x.rotate(rotation);x.fillText(String(s??''),0,0);x.restore()};
+  const rounded=(X,Y,w,h,r,fill,stroke,lw=1.2)=>{x.beginPath();x.roundRect(X,Y,w,h,r);if(fill){x.fillStyle=fill;x.fill()}if(stroke){x.lineWidth=lw;x.strokeStyle=stroke;x.stroke()}};
+  const line=(a,b,c,d,color='#dfe5e1',lw=1)=>{x.beginPath();x.moveTo(a,b);x.lineTo(c,d);x.strokeStyle=color;x.lineWidth=lw;x.stroke()};
+  const format=(v,d=2)=>v===null||v===undefined||!Number.isFinite(v)?'—':nE(v,d);
+  const metric=(v,unit='م²',d=2)=>v===null||v===undefined||!Number.isFinite(v)?'—':`${format(v,d)}${unit}`;
+  const wrap=(s,sz,max)=>{const lines=[];String(s||'—').split('\n').forEach(p=>{let curr='';p.split(/\s+/).filter(Boolean).forEach(w=>{const z=curr?curr+' '+w:w;if(width(z,sz)>max&&curr){lines.push(curr);curr=w}else curr=z});if(curr)lines.push(curr)});return lines.length?lines:['—']};
+  const slot=(B,label,sz=12)=>{x.save();x.setLineDash([5,4]);rounded(B.x,B.y,B.w,B.h,5,'#f6f7f6','#c3c8c5',1);x.restore();text(label,B.x+B.w/2,B.y+B.h/2,fit(label,sz,B.w-12,500),500,'#9aa09d','center')};
+  const cover=(im,B)=>{const iw=im.naturalWidth,ih=im.naturalHeight,s=Math.max(B.w/iw,B.h/ih),dw=iw*s,dh=ih*s;x.save();x.beginPath();x.rect(B.x,B.y,B.w,B.h);x.clip();x.drawImage(im,B.x+(B.w-dw)/2,B.y+(B.h-dh)/2,dw,dh);x.restore()};
+  const C={green:'#1d6b4a',head:'#1b5e3f',dark:'#2b2f2d',muted:'#7d817f',line:'#e4e6e5',border:'#dcdfdd',panel:'#f4f5f4',gold:'#c7a978',
+    mapBg:'#e9e9e9',road:'#ffffff',roadEdge:'#d3d3d3',neigh:'#bdbdbd',fill:'#fbbcbc',stroke:'#ee2020',val:'#1f5c3f',inner:'#fde6e6',sbLine:'#d64545'};
+  const tx=S.tx,gis=S.gis||{},calc=txCalc(m,geo,tx),area=calc.A;
+  const parcelNo=txVal(tx.parcelNo,gis.no),locParts=String(tx.loc||'').split(/[،,›>·]/).map(s=>s.trim()).filter(Boolean);
+  x.fillStyle='#ffffff';x.fillRect(0,0,W,H);
+  const k=1.33,ox=(W-1310*k)/2,oy=12;
+  x.save();x.translate(ox,oy);x.scale(k,k);x.translate(-5,-25);
+  rounded(5,25,1310,732,6,'#fff','#e0e3e1',1);
+  x.save();x.beginPath();x.roundRect(5,25,1310,732,6);x.clip();x.fillStyle=C.panel;x.fillRect(660,82,660,680);x.restore();
 
-  // ---- right: location + building regulations
-  rr(1370,28,395,52,26);x.fillStyle='#eceeed';x.fill();x.strokeStyle='#dde1df';x.lineWidth=1;x.stroke();T('موقع الأرض',1585,55,25,500,TX.dark);
-  x.beginPath();x.arc(1402,54,21,0,Math.PI*2);x.fillStyle='#d5e7db';x.fill();x.strokeStyle=TX.green;x.lineWidth=2;x.stroke();pin(1402,56,11,TX.green);
-  const loc=String(tx.loc||'').replace(/\s*[>›]\s*/g,' › ');T(loc,1757,115,fitF(loc,21,800),400,'#6b6b6b','right');
-  const hd='تنظيمات واشتراطات البناء',hw=mw(hd,24,700);T(hd,1757,175,24,700,TX.green,'right');x.fillStyle=TX.green;x.fillRect(1757-hw,195,hw,4);
-  const card=(i,y,h)=>{const X=1757-(i+1)*153-i*12;rr(X,y,153,h,10);x.fillStyle='#fff';x.fill();x.strokeStyle=TX.line;x.lineWidth=1.2;x.stroke();return X+76.5};
-  [[`${nE(area)}م²`,'مساحة قطعة','الأرض'],[tx.bType||'-','نوع المبنى','المسموح'],[tx.floors||'-','الحد الأقصى لعدد','الأدوار (دور)'],
-   [tx.height&&tx.height!=='-'?`${tx.height}م`:'-','الحد الأقصى','للارتفاع (م)'],[`${nE(ratio,1)}%`,'نسبة البناء','الدور الأرضي']]
-    .forEach(([v,l1,l2],i)=>{const cx=card(i,210,130);T(v,cx,247,fitF(v,27,135,500),500,TX.green);T(l1,cx,287,17,400,TX.muted);T(l2,cx,310,17,400,TX.muted)});
-  [[`${nE(total)}م²`,'مساحة البناء','الإجمالية (م2)',TX.green],[hasFar?nE(far,2):'-','معامل مسطح','البناء (FAR)',TX.dark],
-   [sb.front,'الارتداد الأمامي(م)','',TX.dark],[sb.rear,'الارتداد الخلفي(م)','',TX.dark],[sb.side,'الارتداد الجانبي (م)','',TX.dark]]
-    .forEach(([v,l1,l2,col],i)=>{const cx=card(i,367,95);if(l2){T(l1,cx,389,16,400,TX.muted);T(l2,cx,410,16,400,TX.muted)}else T(l1,cx,396,fitF(l1,16.5,140),400,TX.muted);T(v,cx,441,fitF(v,27,135,500),500,col)});
-  rr(935,478,822,300,10);x.fillStyle='#fff';x.fill();x.strokeStyle=TX.line;x.lineWidth=1.2;x.stroke();
-  const rows=[['اشتراطات مواقف السيارات',tx.parkTxt],['الاستخدامات المسموح بها',tx.uses],['الاستخدامات غير المسموح بها',tx.notUses],
-    ['الاشتراطات الخاصة',tx.special],[tx.archLbl||'اشتراطات العمارة',tx.arch],['الميزة التخطيطية',tx.adv]],rh=300/6;
-  rows.forEach(([l,v],i)=>{const y=478+i*rh;if(i)hl(952,1740,y);T(l,1740,y+rh/2,fitF(l,19,270,600),600,TX.dark,'right');
-    let f=16,ls=wrapL(v||'-',f,490);while(ls.length>2&&f>10){f-=0.5;ls=wrapL(v||'-',f,490)}ls=ls.slice(0,2);
-    const lh=f*1.3;ls.forEach((s,j)=>T(s,1452,y+rh/2+(j-(ls.length-1)/2)*lh,f,400,'#555','right'))});
+  // logo slot (top right): the uploaded logo, otherwise an empty frame
+  const LB={x:1095,y:30,w:200,h:48},logo=TXSLOT.logo.img;
+  if(logo){const s=Math.min(LB.w/logo.naturalWidth,LB.h/logo.naturalHeight),dw=logo.naturalWidth*s,dh=logo.naturalHeight*s;x.drawImage(logo,LB.x+LB.w-dw,LB.y+(LB.h-dh)/2,dw,dh)}
+  else slot(LB,'مكان اللوجو',13);
 
-  // ---- left: parcel drawing (true shape, view rotation from the sheet)
-  const vr=(+S.sheet.vr||0)*D2R,rp=m.P.map(p=>rotV(p,vr)),bb=bbox(rp),bw=Math.max(1,bb.x1-bb.x0),bh=Math.max(1,bb.y1-bb.y0);
-  const R0={x0:400,x1:870,y0:120,y1:490},mg=50,k=Math.min((R0.x1-R0.x0-2*mg)/bw,(R0.y1-R0.y0-2*mg)/bh),cx0=(R0.x0+R0.x1)/2,cy0=(R0.y0+R0.y1)/2,rc={x:(bb.x0+bb.x1)/2,y:(bb.y0+bb.y1)/2};
-  const scr=p=>{const r=rotV(p,vr);return{x:cx0+(r.x-rc.x)*k,y:cy0-(r.y-rc.y)*k}},sv=v=>{const r=rotV(v,vr);return nrm({x:r.x,y:-r.y})};
-  const SP=m.P.map(scr),n=SP.length,ring=r=>r.forEach((p,i)=>i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y));
-  const up=(A,B)=>{let a=Math.atan2(B.y-A.y,B.x-A.x);if(a>Math.PI/2)a-=Math.PI;if(a<=-Math.PI/2)a+=Math.PI;return a};
-  const isFront=i=>(S.verts[i].role||'side')==='front';
-  m.edges.forEach((e,i)=>{if(!isFront(i))return;const A=SP[i],B=SP[(i+1)%n],no=sv(e.nOut),g=5,w=32,q=[add(A,mul(no,g)),add(B,mul(no,g)),add(B,mul(no,g+w)),add(A,mul(no,g+w))];
-    x.beginPath();ring(q);x.closePath();x.fillStyle=TX.road;x.fill();
-    const s=e.name||'شارع',L=Math.hypot(B.x-A.x,B.y-A.y),M0=mul(add(A,B),0.5);T(s,M0.x+no.x*(g+w/2),M0.y+no.y*(g+w/2),Math.min(17,fitF(s,17,L-20,600)),600,'#fff','center',up(A,B))});
-  x.beginPath();ring(SP);x.closePath();x.fillStyle=TX.band;x.fill();
-  geo.parts.forEach(pg=>{x.beginPath();pg.rings.forEach(r=>{ring(r.map(scr));x.closePath()});x.fillStyle=TX.inner;x.fill('evenodd')});
-  x.beginPath();ring(SP);x.closePath();x.strokeStyle=TX.bandS;x.lineWidth=2;x.stroke();
-  m.edges.forEach((e,i)=>{const A=SP[i],B=SP[(i+1)%n];if(Math.hypot(B.x-A.x,B.y-A.y)<45)return;const no=sv(e.nOut),off=isFront(i)?56:22,M0=mul(add(A,B),0.5);
-    T(`${nE(e.len,1)}م`,M0.x+no.x*off,M0.y+no.y*off,20,500,TX.dim,'center',up(A,B))});
-  const ctr=txPole(SP);let fs=clamp(Math.min(bw,bh)*k/7,13,34);
-  const txtFits=f=>{const hw=Math.max(mw('مساحة الموقع',f*0.9,700),mw(`${nE(area)}م²`,f,700))/2+4,hh=f*1.3;   // area text box must lie inside the parcel
-    return[[-1,-1],[1,-1],[1,1],[-1,1]].every(([u,v])=>inPoly({x:ctr.x+u*hw,y:ctr.y+v*hh},SP))};
-  while(fs>12&&!txtFits(fs))fs-=0.5;
-  T('مساحة الموقع',ctr.x,ctr.y-fs*0.62,fs*0.9,700,TX.green);T(`${nE(area)}م²`,ctr.x,ctr.y+fs*0.62,fs,700,TX.green);
-  // qibla (optional): kaaba near the boundary in the qibla direction, label on the same ray clear of the area text; no room inside → badge beside the north arrow
-  if(tx.qibla!==false){const dq=sv(m.vh),lw=mw('اتجاه القبلة',21,700),ext=Math.abs(dq.x)*lw/2+Math.abs(dq.y)*13+6;let t=0;while(t<3000&&inPoly(add(ctr,mul(dq,t+4)),SP))t+=4;
-    const cw=Math.max(mw('مساحة الموقع',fs*0.9,700),mw(`${nE(area)}م²`,fs,700))/2+8,ch=fs*1.35+8;
-    const clearC=(c,hw,hh)=>!(Math.abs(c.x-ctr.x)<cw+hw&&Math.abs(c.y-ctr.y)<ch+hh);
-    const okIn=c=>[[-1,-1],[1,-1],[1,1],[-1,1],[0,0]].every(([u,v])=>inPoly({x:c.x+u*(lw/2+4),y:c.y+v*15},SP))&&clearC(c,lw/2+4,15);
-    const kb=add(ctr,mul(dq,t-18)),pn={x:-dq.y,y:dq.x},extU=u=>Math.abs(u.x)*lw/2+Math.abs(u.y)*13+6;let lb=null;
-    if(clearC(kb,12,12))find:for(let d=ext+30;d<t;d+=6)for(const s of[0,40,-40,80,-80]){const c=add(add(kb,mul(dq,-d)),mul(pn,s)),dl=Math.hypot(kb.x-c.x,kb.y-c.y);
-      if(dl-extU(nrm(sub(kb,c)))-14>=22&&okIn(c)){lb=c;break find}}
-    const kaaba=(p,s)=>{x.save();x.translate(p.x,p.y);x.fillStyle='#1b1b1b';x.fillRect(-s,-s,2*s,2*s);x.fillStyle='#d4a640';x.fillRect(-s,-s*0.45,2*s,s*0.33);x.restore()};
-    const arrow=(a0,a1)=>{const u=nrm(sub(a1,a0)),q={x:-u.y,y:u.x};x.strokeStyle=TX.qibla;x.fillStyle=TX.qibla;x.lineWidth=2.5;x.beginPath();x.moveTo(a0.x,a0.y);x.lineTo(a1.x,a1.y);x.stroke();
-      x.beginPath();x.moveTo(a1.x+u.x*4,a1.y+u.y*4);x.lineTo(a1.x-u.x*8+q.x*6,a1.y-u.y*8+q.y*6);x.lineTo(a1.x-u.x*8-q.x*6,a1.y-u.y*8-q.y*6);x.closePath();x.fill()};
-    if(lb){const u=nrm(sub(kb,lb));arrow(add(lb,mul(u,extU(u))),add(kb,mul(u,-14)));kaaba(kb,9);T('اتجاه القبلة',lb.x,lb.y,21,700,TX.qibla)}
-    else{const c0={x:790,y:58};x.beginPath();x.arc(c0.x,c0.y,34,0,Math.PI*2);x.fillStyle='#fff';x.fill();x.strokeStyle='#e5d3c2';x.lineWidth=1.5;x.stroke();
-      arrow(add(c0,mul(dq,-24)),add(c0,mul(dq,10)));kaaba(add(c0,mul(dq,22)),6);T('اتجاه القبلة',c0.x,c0.y+52,17,700,TX.qibla)}}
-  if(tx.north!==false){const nv=sv({x:0,y:1}),c0={x:575,y:72};x.save();x.translate(c0.x,c0.y);x.rotate(Math.atan2(nv.x,-nv.y));x.fillStyle=TX.dim;x.beginPath();
-    x.moveTo(0,-28);x.lineTo(16,-4);x.lineTo(6,-4);x.lineTo(6,30);x.lineTo(-6,30);x.lineTo(-6,-4);x.lineTo(-16,-4);x.closePath();x.fill();x.restore();
-    T('N',c0.x+nv.x*48,c0.y+nv.y*48,22,700,TX.dim)}
-  {const tot=[5,10,20,25,50,100,200,250,500,1000,2000].filter(v=>v*k<=170).pop()||5,L=tot*k,y=528,x0=620-L/2;
-    x.strokeStyle='#8a8a8a';x.lineWidth=1.5;x.beginPath();x.moveTo(x0,y);x.lineTo(x0+L,y);[0,0.5,1].forEach(f=>{x.moveTo(x0+L*f,y-7);x.lineTo(x0+L*f,y+7)});x.stroke();
-    [0,0.5,1].forEach(f=>T(f===1?`${nE(tot)}م`:nE(tot*f,1),x0+L*f,y+20,16,400,'#8a8a8a'))}
+  // parcel number pill
+  rounded(1005,97,290,38,19,'#ebedec');
+  x.beginPath();x.arc(1030,116,16,0,Math.PI*2);x.fillStyle='#cfe1d5';x.fill();x.lineWidth=1.6;x.strokeStyle='#9fc2ab';x.stroke();
+  x.beginPath();x.arc(1028.5,114.5,5.5,0,Math.PI*2);x.strokeStyle='#557562';x.lineWidth=2;x.stroke();line(1032.5,118.5,1037,123,'#557562',2.6);
+  const pill=`رقم القطعة: ${parcelNo||'غير محدد'}`;text(pill,1281,116.5,fit(pill,16,225,500),500,C.dark);
 
-  // ---- developable-area box
-  rr(55,72,275,183,4);x.fillStyle=TX.box;x.fill();
-  T('المساحة القابلة للتطوير',192,110,fitF('المساحة القابلة للتطوير',22,255,700),700,TX.green);T(`${nE(geo.area)}م²`,192,150,38,700,TX.green);
-  const kv=(lbl,pct,val,y)=>{const segs=[[lbl,600],[`${nE(pct,1)}%`,500],['←',400],[`${nE(val)}م²`,500]],g=7,ws=segs.map(([s,w])=>mw(s,18,w));
-    let xr=192+(ws.reduce((a,b)=>a+b,0)+g*3)/2;segs.forEach(([s,w],i)=>{T(s,xr,y,18,w,TX.dark,'right');xr-=ws[i]+g})};
-  kv('نسبة البناء',ratio,area*ratio/100,193);kv('المواقف',pp,area*pp/100,220);
+  // location line + section title
+  let locTxt=locParts.join(' › ');const planNo=txVal(tx.planNo,gis.planNo);
+  if(!locTxt)locTxt=[txVal(tx.municipality,gis.muni),txVal(tx.planName,gis.planName)].filter(Boolean).join(' › ');
+  if(planNo&&!locTxt.includes(planNo))locTxt+=(locTxt?' › ':'')+`رقم : ${planNo}`;
+  const locShow=locTxt||'المدينة › المخطط › رقم المخطط';text(locShow,1290,160,fit(locShow,14.5,600),400,locTxt?'#6f7371':'#b0b4b2');
+  text('تنظيمات واشتراطات البناء',1290,207,17,600,C.green);line(1110,221.5,1297,221.5,C.gold,3.2);
 
-  // ---- photo documentation card: photo + mini map + caption + QR
-  x.save();x.shadowColor='rgba(0,0,0,0.18)';x.shadowBlur=14;x.shadowOffsetY=3;rr(13,390,354,386,10);x.fillStyle='#fff';x.fill();x.restore();
-  rr(13,390,354,42,9);x.fillStyle=TX.head;x.fill();pin(349,412,11,'#fff');T('التوثيق الفوتوغرافي',334,411,19,700,'#fff','right');
-  // photo frame with the reference padding; the photo fills the frame width and a taller photo is cropped from the top only,
-  // so a QR/caption strip already printed at its bottom stays intact
-  const strip=!!tx.qrStrip,ph=strip?{x:40,y:440,w:295,h:252}:{x:40,y:440,w:300,h:324};
-  if(TXIMG){const iw=ph.w,ih=TXIMG.naturalHeight*ph.w/TXIMG.naturalWidth,dy=ih>ph.h?ph.y+ph.h-ih:ph.y+(ph.h-ih)/2;
-    x.save();x.beginPath();x.rect(ph.x,ph.y,ph.w,ph.h);x.clip();x.drawImage(TXIMG,ph.x,dy,iw,ih);x.restore();
-    if(!strip){const y0=Math.max(ph.y,dy);x.strokeStyle='#d6dbd8';x.lineWidth=1;x.strokeRect(ph.x,y0,ph.w,Math.min(ph.y+ph.h,dy+ih)-y0)}}
-  else{x.fillStyle='#e8ebe9';x.fillRect(ph.x,ph.y,ph.w,ph.h);T('صورة الموقع',ph.x+ph.w/2,ph.y+ph.h/2,18,500,'#8a8a8a')}
-  if(strip){const sy=ph.y+ph.h;x.strokeStyle='#cfd4d1';x.lineWidth=1;x.strokeRect(ph.x,ph.y,ph.w,ph.h+70);hl(ph.x,ph.x+ph.w,sy);
-  if(mini&&mini.t.ok){const s0=96,ox=clamp(mini.px-s0/2,0,256-s0),oy=clamp(mini.py-s0/2,0,256-s0),bx={x:46,y:sy+4,w:66,h:62};
-    x.drawImage(mini.t.im,ox,oy,s0,s0,bx.x,bx.y,bx.w,bx.h);const dx=bx.x+(mini.px-ox)/s0*bx.w,dy=bx.y+(mini.py-oy)/s0*bx.h;
-    x.beginPath();x.arc(dx,dy,5,0,Math.PI*2);x.fillStyle='#e53935';x.fill();x.strokeStyle='#fff';x.lineWidth=1.5;x.stroke()}
-  else{x.fillStyle='#dfe5e1';x.fillRect(46,sy+4,66,62);pin(79,sy+36,12,'#e53935')}
-  const cl=String(tx.cap||'').split('\n').filter(s=>s.trim()).slice(0,3);cl.forEach((s,i)=>T(s,190,sy+35+(i-(cl.length-1)/2)*16,fitF(s,12,140,500),500,TX.dark));
-  drawQR(x,txLink(m),267,sy+4,62)}
-  rr(748,748,114,34,6);x.fillStyle=TX.head;x.fill();T('الموقع',805,766,20,600,'#fff');
-  rr(6,6,W-12,H-12,10);x.strokeStyle='#e3e6e4';x.lineWidth=1.5;x.stroke();
-  return{cv:cv2,W,H,pr}}
+  // ten cards, 5 per row (right to left)
+  const cw=117,gx=(1308-685-5*cw)/4;
+  const card=(col,row,value,label)=>{const x0=1308-(col+1)*cw-col*gx,y0=row?347:230,h=row?78:108;rounded(x0,y0,cw,h,8,'#fff',C.border,1);
+    const ls=label.split('\n'),lc=y0+(row?21:25);ls.forEach((s,i)=>text(s,x0+cw/2,lc+(i-(ls.length-1)/2)*15.5,fit(s,12.5,cw-12),400,C.muted,'center'));
+    const ltr=/^[\d.,]/.test(value);if(ltr)value=value.replace('م²','م‎²');text(value,x0+cw/2,y0+(row?52:67),fit(value,19,cw-14,500),500,C.green,'center',0,ltr?'ltr':'rtl')};
+  const sb=txSetbacks(m);
+  card(0,0,metric(area),'مساحة قطعة الأرض');
+  card(1,0,txVal(tx.bType)||'—','نوع المبنى المسموح');
+  card(2,0,calc.validFloors?format(calc.floors,0):'—','الحد الأقصى لعدد\nالأدوار (دور)');
+  card(3,0,calc.height!==null&&calc.height>0?metric(calc.height,'م',2):'—','الحد الأقصى\nللارتفاع(م)');
+  card(4,0,calc.validRatio?`${format(calc.ratio,1)}%`:'—','نسبة بناء\nالدور الأرضي');
+  card(0,1,metric(calc.byFAR,'م²',1),'مساحة البناء\nالإجمالية (م2)');
+  card(1,1,calc.validFar?format(calc.far,2):'—','معامل مسطح\nالبناء (FAR)');
+  card(2,1,sb.front,'الارتداد الأمامي(م)');
+  card(3,1,sb.rear,'الارتداد الخلفي(م)');
+  card(4,1,sb.side,'الارتداد الجانبي (م)');
+
+  // requirements table
+  const T={x:687,y:437,w:620,h:308};rounded(T.x,T.y,T.w,T.h,8,'#fff',C.border,1);
+  const rows=[
+    ['اشتراطات مواقف السيارات',tx.parkTxt||(calc.validParking?`${format(calc.park,1)}% من مساحة الموقع`:'—')],
+    ['توصيف الأدوار',tx.floorDesc||'—'],
+    txVal(tx.uses)?['الاستخدامات المسموح بها',tx.uses]:null,
+    ['الاستخدامات غير المسموح بها',tx.notUses||'—'],
+    ['الاشتراطات الخاصة',tx.special||'—'],
+    [tx.archLbl||'اشتراطات العمارة',tx.arch||'—'],
+    ['النطاق العمراني (داخل / خارج)',tx.urban||'—'],
+    ['حالة القطعة',tx.status||'—'],
+    ['الملاحظات',tx.notes||'-----']].filter(Boolean);
+  const rh=(T.h-16)/rows.length;
+  rows.forEach(([lab,v],i)=>{const cy=T.y+8+rh*(i+.5);if(i)line(T.x+13,T.y+8+rh*i,T.x+T.w-12,T.y+8+rh*i,C.line,1);
+    text(lab,1290,cy,fit(lab,14,205),400,C.muted);
+    let sz=13.5,ls=wrap(v,sz,370);while(ls.length>2&&sz>9.5){sz-=.5;ls=wrap(v,sz,370)}if(ls.length>2)ls=[ls[0],ls[1]+' …'];
+    ls.forEach((s,j)=>text(s,1075,cy+(j-(ls.length-1)/2)*(sz+2),fit(s,sz,370,500),500,C.val))});
+
+  // maps: real parcel geometry. Street edge = the one chosen in the settings, else the "front" edge(s), else the edge facing south
+  const se=parseInt(tx.streetEdge,10),pick=Number.isInteger(se)&&se>=0&&se<m.edges.length?se:-1;
+  const fronts=m.edges.map((e,i)=>i).filter(i=>(S.verts[i].role||'side')==='front');
+  const south=m.edges.map((e,i)=>i).sort((a,b)=>m.edges[a].nOut.y-m.edges[b].nOut.y)[0];
+  const streets=pick>=0?[pick,...fronts.filter(i=>i!==pick)]:fronts.length?fronts:[south];
+  const primary=pick>=0?pick:streets.reduce((a,b)=>m.edges[b].len>m.edges[a].len?b:a);
+  // orientation: street edge at the bottom like the reference (default), north up, or the sheet's rotation
+  const on=m.edges[primary].nOut,V=(tx.orient==='north'?0:tx.orient==='sheet'?(+S.sheet.vr||0)*D2R:-Math.PI/2-Math.atan2(on.y,on.x))+(clamp(+tx.rot||0,-180,180))*D2R;
+  const RP=m.P.map(p=>rotV(p,V)),n=RP.length;
+  const sn=i=>{const q=rotV(m.edges[i].nOut,V);return{x:q.x,y:-q.y}};
+  const streetName=i=>i===primary?txVal(tx.street,m.edges[i].name,gis.street,locParts[2]):txVal(m.edges[i].name);
+  const neigh=txNeighbours(m);
+  // dimension text: dark edge lengths outside, blue setback values inside the band; every label is a rotated box that must not overlap another
+  const halo=(s,X,Y,sz,weight,col,ang=0,dir='ltr',hw=.3)=>{x.save();x.font=font(sz,weight);x.textAlign='center';x.textBaseline='middle';x.direction=dir;x.translate(X,Y);if(ang)x.rotate(ang);
+    x.lineJoin='round';x.lineWidth=sz*hw;x.strokeStyle='rgba(255,255,255,.95)';x.strokeText(String(s),0,0);x.fillStyle=col;x.fillText(String(s),0,0);x.restore()};
+  const upright=a=>{if(a>Math.PI/2)a-=Math.PI;if(a<-Math.PI/2)a+=Math.PI;return a};
+  const quad=(cx,cy,w,h,a)=>{const c=Math.cos(a),s2=Math.sin(a);return[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([u,v])=>({x:cx+u*c-v*s2,y:cy+u*s2+v*c}))};
+  const arrowHead=(tip,dir,sz,col)=>{const nx=-dir.y,ny=dir.x;x.beginPath();x.moveTo(tip.x,tip.y);x.lineTo(tip.x-dir.x*sz+nx*sz*.45,tip.y-dir.y*sz+ny*sz*.45);x.lineTo(tip.x-dir.x*sz-nx*sz*.45,tip.y-dir.y*sz-ny*sz*.45);x.closePath();x.fillStyle=col;x.fill()};
+  const DIM={len:'#2f3331',sb:'#1660b8'};
+  // plan=true draws like the after-setbacks plan: beige setback band, green buildable area with its area, grey dashed boundary
+  function drawMap(R,F,roadW,fs,numSz,lw,dimFs,avoid,plan){
+    let s=Math.min(F.w/Math.max(1e-6,bbox(RP).x1-bbox(RP).x0),F.h/Math.max(1e-6,bbox(RP).y1-bbox(RP).y0)),c={x:0,y:0};
+    for(let it=0;it<6;it++){const ext=RP.slice();streets.forEach(i=>{const q=rotV(m.edges[i].nOut,V);[RP[i],RP[(i+1)%n]].forEach(p=>ext.push({x:p.x+q.x*roadW*1.1/s,y:p.y+q.y*roadW*1.1/s}))});
+      const b=bbox(ext);s=Math.min(F.w/Math.max(1e-6,b.x1-b.x0),F.h/Math.max(1e-6,b.y1-b.y0));c={x:(b.x0+b.x1)/2,y:(b.y0+b.y1)/2}}
+    const T2=p=>{const v=rotV(p,V);return{x:F.x+F.w/2+(v.x-c.x)*s,y:F.y+F.h/2-(v.y-c.y)*s}};
+    const path=ring=>{x.beginPath();ring.forEach((p,i)=>i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y));x.closePath()};
+    x.save();x.beginPath();x.rect(R.x,R.y,R.w,R.h);x.clip();x.fillStyle=C.mapBg;x.fillRect(R.x,R.y,R.w,R.h);
+    const pts=m.P.map(T2),labels=[];
+    streets.forEach(i=>{const a=pts[i],b=pts[(i+1)%n],L=Math.hypot(b.x-a.x,b.y-a.y)||1,t={x:(b.x-a.x)/L,y:(b.y-a.y)/L},d=sn(i),E=4000;
+      const A0={x:a.x-t.x*E,y:a.y-t.y*E},B0={x:b.x+t.x*E,y:b.y+t.y*E};
+      path([A0,B0,{x:B0.x+d.x*roadW,y:B0.y+d.y*roadW},{x:A0.x+d.x*roadW,y:A0.y+d.y*roadW}]);x.fillStyle=C.road;x.fill();
+      line(A0.x+d.x*roadW,A0.y+d.y*roadW,B0.x+d.x*roadW,B0.y+d.y*roadW,C.roadEdge,1);
+      labels.push({i,a,b,L,t,d})});
+    neigh.forEach(nb=>{const q=nb.ring.map(T2);path(q);x.strokeStyle=C.neigh;x.lineWidth=1;x.stroke();
+      if(nb.no){const p=txPole(q),b=bbox(q);if(Math.min(b.x1-b.x0,b.y1-b.y0)>numSz*1.6)text(nb.no,p.x,p.y,Math.max(10,numSz*.8),400,'#4a4d4c','center')}});
+    const zone=calc.envelopeOK&&geo.parts&&geo.parts.length?geo.parts:null;
+    const zonePath=()=>{x.beginPath();for(const part of zone)for(const r of part.rings){r.map(T2).forEach((p,i)=>i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y));x.closePath()}};
+    const frame=[{x:R.x+3,y:R.y+3},{x:R.x+R.w-3,y:R.y+3},{x:R.x+R.w-3,y:R.y+R.h-3},{x:R.x+3,y:R.y+R.h-3}];
+    const taken=avoid?[avoid]:[],free=q=>polyIn(q,frame)&&!taken.some(o=>overlap(q,o));
+    const place=(cands,force=true)=>{for(const cd of cands)if(free(cd.q)){taken.push(cd.q);return cd}if(!force||!cands.length)return null;taken.push(cands[0].q);return cands[0]};
+    const noTxt=parcelNo||'غير محدد';
+    if(plan){path(pts);x.fillStyle=BLD.band;x.fill();
+      if(zone){zonePath();x.fillStyle=BLD.fill;x.fill('evenodd');x.lineWidth=1;x.strokeStyle=BLD.fillS;x.stroke()}
+      path(pts);x.save();x.setLineDash([6,4]);x.lineWidth=1.4;x.strokeStyle=BLD.edge;x.lineJoin='round';x.stroke();x.restore();
+      // number + buildable area, white, in the middle of the largest buildable part
+      const big=zone?zone.reduce((a,b)=>b.area>a.area?b:a).rings[0].map(T2):pts,c0=txPole(big);
+      // width available on the horizontal line through c0 (not the bbox, which overstates it for L-shapes)
+      let lo=-Infinity,hi=Infinity;big.forEach((a,i)=>{const b=big[(i+1)%big.length];if((a.y>c0.y)===(b.y>c0.y))return;const X=a.x+(c0.y-a.y)/(b.y-a.y)*(b.x-a.x);if(X<c0.x)lo=Math.max(lo,X);else hi=Math.min(hi,X)});
+      const mw=Math.max(30,2*Math.min(c0.x-lo,hi-c0.x)-10);
+      const ink=zone?'#ffffff':'#111',l2='المساحة القابلة للبناء',l3=zone?`${nE(geo.area,2)} م‎²`:'';
+      const z1=fit(noTxt,parcelNo?numSz:numSz*.6,mw,700),z2=fit(l2,10.5,mw,500),z3=fit(l3||'-',13,mw,700),gap=4,hh=z1+(zone?z2+z3+2*gap:0);let yy=c0.y-hh/2;
+      const put=(t,z,w)=>{if(zone)text(t,c0.x,yy+z/2,z,w,ink,'center',0,/^[\d.,]/.test(t)?'ltr':'rtl');else halo(t,c0.x,yy+z/2,z,w,ink,0,'rtl',.22);yy+=z+gap};
+      put(noTxt,z1,700);if(zone){put(l2,z2,500);put(l3,z3,700)}
+      taken.push(quad(c0.x,c0.y,Math.max(width(noTxt,z1,700),zone?width(l2,z2,500):0)+6,hh+4,0))}
+    else{// parcel = setback band colour; buildable area lighter with a dashed setback line
+      path(pts);x.fillStyle=C.fill;x.fill();
+      if(m.hasSb&&zone){zonePath();x.fillStyle=C.inner;x.fill('evenodd');x.save();x.setLineDash([5,3]);x.lineWidth=1;x.strokeStyle=C.sbLine;x.stroke();x.restore()}
+      path(pts);x.lineWidth=lw;x.strokeStyle=C.stroke;x.lineJoin='round';x.stroke();
+      // parcel number at the pole of inaccessibility, black with a white halo
+      const p0=txPole(pts),nsz=parcelNo?numSz:numSz*.6;halo(noTxt,p0.x,p0.y,nsz,700,'#111',0,'rtl',.22);
+      taken.push(quad(p0.x,p0.y,width(noTxt,nsz,700)+4,nsz+2,0))}
+    const E=m.edges.map((e,i)=>{const a=pts[i],b=pts[(i+1)%n],L=Math.hypot(b.x-a.x,b.y-a.y)||1;return{e,i,a,b,L,t:{x:(b.x-a.x)/L,y:(b.y-a.y)/L},d:sn(i),ang:upright(Math.atan2(b.y-a.y,b.x-a.x))}});
+    // edge lengths outside the parcel, parallel to the edge (largest edges first so they get the best spot)
+    [...E].sort((p,q)=>q.L-p.L).forEach(g=>{const s2=`${nE(g.e.len,2)} م`,cands=[];
+      for(const sz of [dimFs,dimFs*.86,dimFs*.74]){const w=width(s2,sz,600)+4,h=sz+2;
+        for(const off of [3,3+h,3+2*h])for(const u of [0,.22,-.22,.38,-.38]){const p={x:(g.a.x+g.b.x)/2+g.t.x*g.L*u+g.d.x*(off+h/2),y:(g.a.y+g.b.y)/2+g.t.y*g.L*u+g.d.y*(off+h/2)};
+          cands.push({p,sz,q:quad(p.x,p.y,w,h,g.ang)})}}
+      const r=place(cands);halo(s2,r.p.x,r.p.y,r.sz,600,DIM.len,g.ang)});
+    // setback: double arrow from the boundary to the setback line, value inside the band, or beside it with a leader
+    E.forEach(g=>{const sb=g.e.sb;if(!(sb>0.005))return;const band=sb*s,inw={x:-g.d.x,y:-g.d.y},s2=`${nE(sb,2)} م`,cands=[];
+      for(const f of [.5,.32,.68,.2,.8]){const P0={x:g.a.x+(g.b.x-g.a.x)*f,y:g.a.y+(g.b.y-g.a.y)*f},mid={x:P0.x+inw.x*band/2,y:P0.y+inw.y*band/2};
+        for(const sz of [dimFs*.95,dimFs*.82,dimFs*.7]){const w=width(s2,sz,600)+4,h=sz+2,fitsIn=band>=h+1;
+          for(const side of [1,-1]){const along=side*(w/2+4);
+            if(fitsIn)cands.push({P0,mid,sz,lead:false,p:{x:mid.x+g.t.x*along,y:mid.y+g.t.y*along}});
+            else for(const k of [band+4+h/2,band+6+h*1.5]){const p={x:P0.x+inw.x*k+g.t.x*along,y:P0.y+inw.y*k+g.t.y*along};cands.push({P0,mid,sz,lead:true,p})}}}}
+      cands.forEach(cd=>cd.q=quad(cd.p.x,cd.p.y,width(s2,cd.sz,600)+4,cd.sz+2,g.ang));
+      const r=place(cands),P1={x:r.P0.x+inw.x*band,y:r.P0.y+inw.y*band},hs=Math.min(5,Math.max(2.6,band/3.2));
+      x.lineWidth=.9;x.strokeStyle=DIM.sb;
+      if(band>=hs*2.4){line(r.P0.x,r.P0.y,P1.x,P1.y,DIM.sb,.9);arrowHead(r.P0,g.d,hs,DIM.sb);arrowHead(P1,inw,hs,DIM.sb)}
+      else{const o=hs*2.2;line(r.P0.x+g.d.x*o,r.P0.y+g.d.y*o,P1.x+inw.x*o,P1.y+inw.y*o,DIM.sb,.9);arrowHead(r.P0,inw,hs,DIM.sb);arrowHead(P1,g.d,hs,DIM.sb)}
+      if(r.lead){const tip={x:r.p.x+g.d.x*(r.sz/2+1),y:r.p.y+g.d.y*(r.sz/2+1)};line(r.mid.x,r.mid.y,tip.x,tip.y,DIM.sb,.7);x.beginPath();x.arc(r.mid.x,r.mid.y,1.3,0,Math.PI*2);x.fillStyle=DIM.sb;x.fill()}
+      halo(s2,r.p.x,r.p.y,r.sz,600,DIM.sb,g.ang)});
+    // street names last, slid along the road to a free spot
+    labels.forEach(({i,a,b,L,t,d})=>{const nm=streetName(i);if(!nm&&i!==primary)return;const s2=nm||'اسم الشارع',ang=upright(Math.atan2(t.y,t.x));
+      const sz=fit(s2,fs,Math.min(R.w*.8,L+roadW*5),500),w=width(s2,sz,500)+4,base={x:(a.x+b.x)/2+d.x*roadW/2,y:(a.y+b.y)/2+d.y*roadW/2},cands=[];
+      for(let j=0;j<=64;j++){const u=(j%2?1:-1)*Math.ceil(j/2)*.05;const p={x:base.x+t.x*L*u,y:base.y+t.y*L*u};cands.push({p,q:quad(p.x,p.y,w,sz*.9,ang)})}
+      const r=place(cands);text(s2,r.p.x,r.p.y,sz,500,nm?C.green:'#9aa09d','center',ang)});
+    x.restore()}
+  // the floating card covers the left of the top map, so labels keep out of it
+  drawMap({x:5,y:82,w:650,h:293},{x:410,y:160,w:120,h:140},26,15,13,1.6,8.6,[{x:10,y:120},{x:345,y:120},{x:345,y:380},{x:10,y:380}]);
+  drawMap({x:342,y:397,w:310,h:348},{x:378,y:432,w:238,h:278},40,18,22,2.2,12,null,true);
+  if(tx.north!==false){const nq=rotV({x:0,y:1},V),d={x:nq.x,y:-nq.y},cx=630,cy=110,r=19,nx=-d.y,ny=d.x;
+    x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fillStyle='rgba(255,255,255,.94)';x.fill();x.lineWidth=1;x.strokeStyle='#c9cecb';x.stroke();
+    // arrow: dark head toward north, light tail, "N" just inside the rim at the tip
+    const tip={x:cx+d.x*(r-9),y:cy+d.y*(r-9)},tail={x:cx-d.x*(r-4),y:cy-d.y*(r-4)},L=(k,w)=>({x:cx+d.x*k+nx*w,y:cy+d.y*k+ny*w});
+    x.beginPath();x.moveTo(tip.x,tip.y);x.lineTo(L(-1,4.5).x,L(-1,4.5).y);x.lineTo(L(-1,-4.5).x,L(-1,-4.5).y);x.closePath();x.fillStyle='#1f2421';x.fill();
+    x.beginPath();x.moveTo(tail.x,tail.y);x.lineTo(L(-1,4.5).x,L(-1,4.5).y);x.lineTo(L(-1,-4.5).x,L(-1,-4.5).y);x.closePath();x.fillStyle='#b9bfbc';x.fill();
+    text('N',cx+d.x*(r-4.5),cy+d.y*(r-4.5),8,700,'#1f2421','center',0,'ltr')}
+
+  // floating data card
+  const CB={x:15,y:128,w:323,h:617};
+  x.save();x.shadowColor='rgba(0,0,0,.2)';x.shadowBlur=14;x.shadowOffsetY=3;rounded(CB.x,CB.y,CB.w,CB.h,8,'#fff');x.restore();
+  x.beginPath();x.roundRect(CB.x,CB.y,CB.w,32,[8,8,0,0]);x.fillStyle=C.head;x.fill();
+  const px=CB.x+CB.w-17,py=CB.y+16;x.beginPath();x.arc(px,py-2.5,5,Math.PI,0);x.lineTo(px,py+7);x.closePath();x.fillStyle='#fff';x.fill();
+  x.beginPath();x.arc(px,py-2.5,1.9,0,Math.PI*2);x.fillStyle=C.head;x.fill();
+  const head=`بيانات ${parcelNo||'غير محدد'}`;text(head,CB.x+CB.w-29,py,fit(head,15.5,200,600),600,'#fff');
+  line(CB.x+16,py-4.5,CB.x+25,py+4.5,'#fff',2);line(CB.x+25,py-4.5,CB.x+16,py+4.5,'#fff',2);
+  const meta=[
+    ['استخدام المخطط',txVal(tx.planUse,gis.use)],
+    ['الاستخدام الفرعي للقطعة',txVal(tx.subUse)],
+    ['استخدام القطعة',txVal(tx.parcelUse,tx.bType)],
+    ['اسم المخطط',txVal(tx.planName,gis.planName)],
+    ['رقم المخطط',planNo],
+    ['اسم الحي',txVal(tx.district,gis.district)],
+    ['اسم البلدية',txVal(tx.municipality,gis.muni)],
+    ['وجود تعارض',txVal(tx.conflict)]];
+  meta.forEach(([lab,v],i)=>{const cy=183+i*23.6;line(CB.x+12,cy+11.8,CB.x+CB.w-12,cy+11.8,C.line,1);
+    text(lab,CB.x+CB.w-13,cy,12.5,400,C.muted);const s2=v||'—',mw=CB.w-26-width(lab,12.5)-12;text(s2,CB.x+13,cy,fit(s2,12.5,mw,600),600,v?C.val:'#9aa09d','left')});
+  text('التوثيق الفوتوغرافي',CB.x+CB.w-13,414,13,700,C.dark);
+
+  // photo + ready-made barcode/QR card, stacked in the reference frame
+  // a site photo with no separate barcode image (often a photo that already has its QR strip) gets the whole frame
+  const PF={x:47,y:432,w:268,h:300},bar=TXSLOT.bar.img;let barH=bar||S.tx.qrStrip||!TXIMG?69:0;
+  if(bar){barH=Math.min(PF.h,PF.w*bar.naturalHeight/bar.naturalWidth);x.drawImage(bar,PF.x,PF.y+PF.h-barH,PF.w,barH)}
+  else if(S.tx.qrStrip){const B={x:PF.x,y:PF.y+PF.h-barH,w:PF.w,h:barH},q=barH-10;rounded(B.x,B.y,B.w,B.h,0,'#fff');
+    drawQR(x,txLink(m),B.x+B.w-q-5,B.y+5,q);
+    if(mini&&mini.t&&mini.t.img&&mini.t.ok){x.drawImage(mini.t.img,B.x+5,B.y+5,q,q);x.fillStyle='#e84848';x.beginPath();x.arc(B.x+5+mini.px/256*q,B.y+5+mini.py/256*q,3.5,0,Math.PI*2);x.fill()}else rounded(B.x+5,B.y+5,q,q,1,'#ecefec','#d7ddd8');
+    const cap=String(tx.cap||'').split('\n').filter(Boolean);const info=[streetName(primary),txVal(tx.district,gis.district,locParts[1]),parcelNo?`رقم القطعة (${parcelNo})`:''].filter(Boolean).concat(cap).slice(0,4);
+    info.forEach((s2,i)=>text(s2,B.x+B.w/2,B.y+B.h/2+(i-(info.length-1)/2)*12,fit(s2,9.5,B.w-2*q-24,600),600,C.dark,'center'))}
+  else if(barH)slot({x:PF.x,y:PF.y+PF.h-barH,w:PF.w,h:barH},'مكان صورة الباركود / QR الجاهزة',11);
+  const ph={x:PF.x,y:PF.y,w:PF.w,h:PF.h-barH};
+  if(ph.h>4){if(TXIMG&&!barH){const iw=TXIMG.naturalWidth,ih=TXIMG.naturalHeight,k2=Math.min(PF.w/iw,PF.h/ih),dw=iw*k2,dh=ih*k2;x.fillStyle='#fff';x.fillRect(PF.x,PF.y,PF.w,PF.h);
+      // the whole photo, nothing cropped (it may carry its own QR strip at the bottom); centred, sitting on the frame's bottom edge
+      x.drawImage(TXIMG,PF.x+(PF.w-dw)/2,PF.y+PF.h-dh,dw,dh)}
+    else if(TXIMG)cover(TXIMG,ph);else slot({x:ph.x,y:ph.y,w:ph.w,h:ph.h-(bar?0:4)},'صورة التوثيق الفوتوغرافي',13)}
+  x.strokeStyle='#cfd3d0';x.lineWidth=1;x.strokeRect(PF.x,PF.y,PF.w,PF.h);
+  x.restore();
+
+  const note=`لوحة استرشادية غير معتمدة؛ الضوابط النظامية من مدخلات المستخدم.`+(calc.envelopeOK?' الأرقام محسوبة هندسيًا من حدود القطعة.':' تحذير: تعذّر حساب هندسة الارتدادات بشكل موثوق؛ راجعها.');
+  text(note,W-ox-6,H-11,11.5,400,calc.envelopeOK?'#8a8f8c':'#aa452e');
+  return {cv:canvas,W,H,pr,calc};
+}
+
+/* other parcels from the same imported GIS layer, moved into this parcel's metric frame */
+function txNeighbours(m){const out=[];if(!Array.isArray(PARCELS)||PARCELS.length<2)return out;
+  const c0=centroid(m.P),R=Math.max(...m.P.map(p=>Math.hypot(p.x-c0.x,p.y-c0.y)))*12+150;
+  for(const pc of PARCELS){if(pc===CUR_PC)continue;const r=pc.ring,geo=pc.prj?.kind==='geo'||(!pc.prj?.kind||pc.prj.kind==='unknown')&&r.every(p=>Math.abs(p.x)<=180&&Math.abs(p.y)<=90);
+    const z=pc.prj?.zone||clamp(Math.round(+S.zone)||38,1,60);
+    let q;try{q=r.map(p=>m.geo.F.fromLL(geo?{lat:p.y,lon:p.x}:utm2ll(p.x,p.y,z)))}catch(e){continue}
+    if(!q.length||q.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))continue;const c=centroid(q);
+    if(Math.hypot(c.x-c0.x,c.y-c0.y)>R)continue;if(Math.hypot(c.x-c0.x,c.y-c0.y)<0.5&&Math.abs(Math.abs(polyArea(q))-m.plotArea)<m.plotArea*0.02)continue;
+    out.push({ring:q,no:pc.no||''})}return out}
+
+/* image slots for the transaction sheet: logo (top right) and the ready-made barcode/QR card (under the photo) */
+const TXSLOT={logo:{img:null,data:null,store:'gis-parcel-planner-tx-logo-v1',max:1400,info:'#txLogoInfo',empty:'لا يوجد لوجو؛ يظهر مكانه إطار فارغ في النموذج.'},
+  bar:{img:null,data:null,store:'gis-parcel-planner-tx-barcode-v1',max:2000,info:'#txBarInfo',empty:'لا توجد صورة باركود؛ يظهر مكانها إطار فارغ في النموذج.'}};
+function loadTxSlot(k,dataUrl,fresh){const sl=TXSLOT[k],im=new Image();im.onload=()=>{sl.img=im;sl.data=dataUrl;$(sl.info).textContent=`الصورة جاهزة (${im.naturalWidth}×${im.naturalHeight})`;
+  try{localStorage.setItem(sl.store,dataUrl)}catch(e){if(fresh)toast('الصورة كبيرة على الحفظ في المتصفح؛ ستبقى حتى تغلق الصفحة.')}};
+  im.onerror=()=>toast('تعذّر قراءة الصورة. جرّب PNG أو JPG.');im.src=dataUrl}
+function clearTxSlot(k){const sl=TXSLOT[k];sl.img=null;sl.data=null;$(sl.info).textContent=sl.empty;try{localStorage.removeItem(sl.store)}catch(e){}}
+// kept lossless (PNG) so QR modules and logo edges stay sharp; only very large images are scaled down
+function readTxSlot(k,f){if(!f||!f.type.startsWith('image/')){toast('اختر ملف صورة (PNG أو JPG).');return}const r=new FileReader();
+  r.onload=()=>{const im=new Image();im.onload=()=>{const mx=TXSLOT[k].max,s=Math.min(1,mx/Math.max(im.naturalWidth,im.naturalHeight));if(s===1){loadTxSlot(k,r.result,true);return}
+    const c2=document.createElement('canvas');c2.width=Math.round(im.naturalWidth*s);c2.height=Math.round(im.naturalHeight*s);const g=c2.getContext('2d');g.imageSmoothingQuality='high';g.drawImage(im,0,0,c2.width,c2.height);loadTxSlot(k,c2.toDataURL('image/png'),true)};
+    im.onerror=()=>toast('تعذّر قراءة الصورة. جرّب PNG أو JPG.');im.src=r.result};r.readAsDataURL(f)}
+[['logo','#txLogoDrop','#txLogoFile','#txLogoClear'],['bar','#txBarDrop','#txBarFile','#txBarClear']].forEach(([k,d,f,cl])=>{const dz=$(d);
+  dz.onclick=()=>$(f).click();dz.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$(f).click()}};
+  $(f).onchange=e=>{readTxSlot(k,e.target.files[0]);e.target.value=''};
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('on')});dz.addEventListener('dragleave',()=>dz.classList.remove('on'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('on');readTxSlot(k,e.dataTransfer.files[0])});
+  $(cl).onclick=()=>clearTxSlot(k)});
+
 function loadTxPhoto(dataUrl,fresh){const im=new Image();im.onload=()=>{TXIMG=im;TXDATA=dataUrl;$('#txPhotoInfo').textContent=`الصورة جاهزة (${im.naturalWidth}×${im.naturalHeight})`;
   try{localStorage.setItem(STORE_TXP,dataUrl)}catch(e){if(fresh)toast('الصورة كبيرة على الحفظ في المتصفح؛ ستبقى حتى تغلق الصفحة.')}};
   im.onerror=()=>toast('تعذّر قراءة الصورة. جرّب PNG أو JPG.');im.src=dataUrl}
@@ -1363,27 +1619,36 @@ $('#txFile').onchange=e=>{readTxPhoto(e.target.files[0]);e.target.value=''};
 txDrop.addEventListener('dragover',e=>{e.preventDefault();txDrop.classList.add('on')});txDrop.addEventListener('dragleave',()=>txDrop.classList.remove('on'));
 txDrop.addEventListener('drop',e=>{e.preventDefault();txDrop.classList.remove('on');readTxPhoto(e.dataTransfer.files[0])});
 $('#txPhotoClear').onclick=clearTxPhoto;
-$('#xTx').onclick=async()=>{M=compute();if(M.bad){toast('أدخل حدود الأرض أولاً.');return}
-  const geo=buildableGeom(M);toast('جارٍ تجهيز النموذج…');
+async function txOpen(refresh){M=compute();if(M.bad){toast('أدخل حدود الأرض أولاً.');return}
+  const geo=buildableGeom(M);if(!refresh)toast('جارٍ تجهيز النموذج…');
   try{if(document.fonts)await Promise.all(['400','500','600','700'].map(w=>document.fonts.load(`${w} 16px "IBM Plex Sans Arabic"`,'المساحة ١٢٣')))}catch(e){}
-  const mini=S.tx.qrStrip?txMiniTile(M):null;if(mini&&!mini.t.ok&&!mini.t.err)await Promise.race([mini.t.p,new Promise(r=>setTimeout(r,6000))]);
+  $('#bldTitleRow').hidden=true;const mini=S.tx.qrStrip?txMiniTile(M):null;if(mini&&!mini.t.ok&&!mini.t.err)await Promise.race([mini.t.p,new Promise(r=>setTimeout(r,6000))]);
   let out=drawTx(M,geo,mini),blob;
   try{blob=await new Promise(r=>out.cv.toBlob(r,'image/png'))}catch(e){out=drawTx(M,geo,null);blob=await new Promise(r=>out.cv.toBlob(r,'image/png'))}
-  closeBld();BLD_OUT={blob,url:URL.createObjectURL(blob),name:baseName()+'_transaction.png',cv:out.cv,W:out.W,H:out.H};
-  $('#bldHead').textContent='معاينة نموذج المعاملة';$('#bldPdf').hidden=false;$('#bldImg').src=BLD_OUT.url;
-  $('#bldInfo').textContent=`مساحة الأرض ${fmtU(M.plotArea,2)} م² · القابلة للتطوير ${fmtU(geo.area,2)} م²`+
+  if(refresh){if(BLD_OUT&&BLD_OUT.url)URL.revokeObjectURL(BLD_OUT.url)}else closeBld();
+  BLD_OUT={blob,url:URL.createObjectURL(blob),name:baseName()+'_transaction.png',cv:out.cv,W:out.W,H:out.H};
+  $('#txRotRow').hidden=false;if(!refresh)txRotShow();
+  $('#bldHead').textContent='معاينة نموذج المعاملة — نموذج استرشادي';$('#bldPdf').hidden=false;$('#bldImg').src=BLD_OUT.url;
+  $('#bldInfo').textContent=`مساحة الأرض ${fmtU(M.plotArea,2)} م² · المساحة بعد الارتدادات ${fmtU(geo.area,2)} م² · بصمة الدور ${out.calc.footprint===null?'غير محددة':fmtU(out.calc.footprint,2)+' م²'} · الإجمالي بعد القيود ${out.calc.gross===null?'غير محدد':fmtU(out.calc.gross,2)+' م²'}`+
     (S.tx.qrStrip?` · QR: ${txLink(M)}`+(window.qrcode?'':' (مكتبة QR لم تُحمَّل)'):'')+(TXIMG?'':' · لم تُرفع صورة الموقع.');
-  $('#bldModal').hidden=false;$('#bldSave').focus()};
+  if(!refresh){$('#bldModal').hidden=false;$('#bldSave').focus()}}
+$('#xTx').onclick=()=>txOpen(false);
+function txRotShow(){const v=Math.round(clamp(+S.tx.rot||0,-180,180));$('#txRotR').value=v;$('#txRotN').value=v;$('#txRotV').textContent=v+'°';$('#txRot').value=v}
+let TXR_T=0;const txRotSet=v=>{v=clamp(Math.round(+v||0),-180,180);S.tx.rot=v;txRotShow();persist();clearTimeout(TXR_T);
+  TXR_T=setTimeout(()=>{if(!$('#bldModal').hidden&&!$('#txRotRow').hidden)txOpen(true)},120)};
+$('#txRotR').addEventListener('input',e=>txRotSet(e.target.value));$('#txRotN').addEventListener('input',e=>{if(e.target.value!=='')txRotSet(e.target.value)});
+$('#txRotRef').onclick=()=>txRotSet(22);$('#txRot0').onclick=()=>txRotSet(0);
 $('#bldPdf').onclick=async()=>{if(!BLD_OUT||!BLD_OUT.cv)return;if(!window.jspdf){toast('مكتبة PDF لم تُحمَّل بعد.');return}
   const{W,H}=BLD_OUT,pdf=new window.jspdf.jsPDF({orientation:W>=H?'landscape':'portrait',unit:'pt',format:[Math.min(W,H)*0.75,Math.max(W,H)*0.75],compress:true});
   pdf.addImage(BLD_OUT.cv.toDataURL('image/jpeg',0.95),'JPEG',0,0,W*0.75,H*0.75,undefined,'FAST');await saveFile(BLD_OUT.name.replace(/\.png$/,'.pdf'),pdf.output('blob'))};
 
 /* project file */
-$('#xJson').onclick=()=>saveFile(baseName()+'.json',JSON.stringify({app:'mosque-site-planner',v:1,state:S,image:IMGDATA,txPhoto:TXDATA},null,1));
+$('#xJson').onclick=()=>saveFile(baseName()+'.json',JSON.stringify({app:'mosque-site-planner',v:1,state:S,image:IMGDATA,txPhoto:TXDATA,txLogo:TXSLOT.logo.data,txBarcode:TXSLOT.bar.data},null,1));
 $('#openJson').onclick=()=>$('#jsonFile').click();
 $('#jsonFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);S=merge(defaults(),j.state||j);
   syncInputs();renderVerts();applyProjType();persist();if(j.image)loadImage(j.image,false);else{IMG=null;IMGDATA=null}
-  if(j.txPhoto)loadTxPhoto(j.txPhoto,false);else clearTxPhoto();schedule();toast('فُتح المشروع.')}catch(err){toast('الملف ليس مشروعاً صالحاً.')}};r.readAsText(f);e.target.value=''};
+  if(j.txPhoto)loadTxPhoto(j.txPhoto,false);else clearTxPhoto();
+  if(j.txLogo)loadTxSlot('logo',j.txLogo,false);else clearTxSlot('logo');if(j.txBarcode)loadTxSlot('bar',j.txBarcode,false);else clearTxSlot('bar');schedule();toast('فُتح المشروع.')}catch(err){toast('الملف ليس مشروعاً صالحاً.')}};r.readAsText(f);e.target.value=''};
 
 let tt=0;function toast(s){const t=$('#toast');t.textContent=s;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200)}
 
@@ -1460,7 +1725,7 @@ $('#mGo').onclick=mapSearch;$('#mSearch').addEventListener('keydown',e=>{if(e.ke
 $('#mSearch').addEventListener('input',e=>e.stopPropagation());
 
 /* ---------- import parcels: Shapefile ZIP / GeoJSON / KML / KMZ ---------- */
-let PARCELS=[];
+let PARCELS=[],CUR_PC=null;
 function parseSHP(buf){const dv=new DataView(buf),out=[];let o=100;
   while(o+12<=buf.byteLength){const len=dv.getInt32(o+4,false)*2,rs=o+8;if(len<=0||rs+len>buf.byteLength+1)break;const st=dv.getInt32(rs,true);
     if([3,5,13,15,23,25].includes(st)){const np=dv.getInt32(rs+36,true),n=dv.getInt32(rs+40,true),parts=[];for(let i=0;i<np;i++)parts.push(dv.getInt32(rs+44+4*i,true));
@@ -1478,6 +1743,23 @@ function prjInfo(t){if(!t)return null;const datum=/WGS[_ ]?(19)?84|WGS_1984/i.te
   let z=t.match(/UTM[_ ]?zone[_ ]?(\d{1,2})\s*N/i)||t.match(/UTM[^"]*?(\d{1,2})N/i);
   if(!z){const cm=t.match(/Central_Meridian"\s*,\s*(-?[\d.]+)/i),sf=t.match(/Scale_Factor"\s*,\s*([\d.]+)/i);if(cm&&sf&&Math.abs(+sf[1]-0.9996)<1e-6)z=[0,Math.round((+cm[1]+183)/6)]}
   return z?{kind:'utm',zone:+z[1],datum}:{kind:'unknown',datum}}
+/* transaction-sheet fallbacks read from the imported layer's attribute table (first matching column) */
+const GIS_NO_RE=/parcel|plot|qataa|land_?no|pl_?no|^no$|^name$|قطعة|قطعه/i,GIS_NO_NOT=/plan|مخطط|use|استخدام|area|مساح|street|شارع/i;
+function gisAutoNoKey(ks){return ks.find(k=>GIS_NO_RE.test(k)&&!GIS_NO_NOT.test(k))||''}
+function gisNoKey(ks){const f=S.gisNoField;return f&&ks.includes(f)?f:gisAutoNoKey(ks)}
+function gisKeys(){const set=new Set();PARCELS.forEach(pc=>Object.keys(pc.attrs||{}).forEach(k=>set.add(k)));return[...set]}
+function gisRefreshNos(){PARCELS.forEach(pc=>{pc.no=gisFields(pc.attrs).no});if(CUR_PC)S.gis=gisFields(CUR_PC.attrs);
+  const sel=$('#parcelSel');if(sel)[...sel.options].forEach((o,i)=>{const pc=PARCELS[i];if(pc)o.textContent=pc.no?`قطعة رقم ${pc.no}`:`قطعة ${i+1} — رقم غير محدد`});
+  const ks=gisKeys(),fs=$('#parcelNoField');$('#parcelNoPick').hidden=!ks.length;
+  if(fs){const auto=gisAutoNoKey(ks);fs.innerHTML=`<option value="">تلقائي${auto?' ('+esc(auto)+')':''}</option>`+ks.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('');fs.value=ks.includes(S.gisNoField)?S.gisNoField:''}
+  const ti=$('#txParcel');if(ti)ti.placeholder=S.gis&&S.gis.no?`من ملف GIS: ${S.gis.no}`:'غير محدد في ملف GIS — اكتبه يدويًا';
+  const gi=$('#txGisNo');if(gi)gi.textContent=S.gis&&S.gis.noKey?`رقم القطعة من ملف GIS: ${S.gis.no||'غير محدد'} (الحقل ${S.gis.noKey}). الخانة اليدوية تتقدّم عليه، وتُفرَّغ عند اختيار قطعة أخرى.`:'لا يوجد حقل لرقم القطعة في الملف؛ اكتب الرقم يدويًا.'}
+function gisFields(row){const o={no:'',noKey:'',street:'',planName:'',planNo:'',district:'',muni:'',use:''};if(!row||typeof row!=='object')return o;const ks=Object.keys(row);
+  const get=(re,not)=>{const k=ks.find(k=>re.test(k)&&!(not&&not.test(k))&&String(row[k]??'').trim());return k?String(row[k]).trim().slice(0,80):''};
+  o.planNo=get(/plan_?(no|num)|رقم.?المخطط/i);o.planName=get(/plan_?name|اسم.?المخطط/i);
+  o.noKey=gisNoKey(ks);o.no=o.noKey?String(row[o.noKey]??'').trim():'';
+  o.street=get(/street|road|st_?name|شارع|طريق/i);o.district=get(/district|hay|neigh|^حي$|اسم.?الحي|الحي/i);
+  o.muni=get(/munic|balad|بلدي/i);o.use=get(/land_?use|^use|استخدام/i);return o}
 function cleanRing(r){let p=r.slice();if(p.length>1){const a=p[0],b=p.at(-1);if(Math.abs(a.x-b.x)<1e-9&&Math.abs(a.y-b.y)<1e-9)p.pop()}return p}
 function pickLabel(row,i){if(!row)return'قطعة '+(i+1);const keys=Object.keys(row);
   const pref=keys.find(k=>/parcel|plot|qataa|land_?no|pl_?no|^no$|رقم|قطعة|name/i.test(k)&&row[k]);const v=pref?row[pref]:keys.map(k=>row[k]).find(x=>x);
@@ -1492,7 +1774,7 @@ async function importFile(f){const name=f.name.toLowerCase();let list=[],info=''
       if(shp){const base=shp.name.replace(/\.shp$/i,''),get=ext=>files.find(x=>x.name.toLowerCase()===(base+ext).toLowerCase());
         const geoms=parseSHP(await shp.async('arraybuffer'));const dbfF=get('.dbf'),prjF=get('.prj'),cpgF=get('.cpg');
         const rows=dbfF?parseDBF(await dbfF.async('arraybuffer'),cpgF?await cpgF.async('string'):''):[];const prj=prjF?prjInfo(await prjF.async('string')):null;
-        geoms.forEach((g,i)=>{if(!g)return;const ring=largest(g.map(r=>r.map(p=>({x:p.x,y:p.y}))));if(ring)list.push({label:pickLabel(rows[i],list.length),ring,prj})});
+        geoms.forEach((g,i)=>{if(!g)return;const ring=largest(g.map(r=>r.map(p=>({x:p.x,y:p.y}))));if(ring)list.push({label:pickLabel(rows[i],list.length),ring,prj,attrs:rows[i]||{}})});
         if(!list.length)throw new Error('ملف SHP لا يحتوي مضلعات.');
         info=prj?(prj.kind==='utm'?`الإسقاط: UTM نطاق ${prj.zone} شمال`:prj.kind==='geo'?'الإسقاط: إحداثيات جغرافية (درجات)':'إسقاط غير معروف'):'لا يوجد ملف PRJ';
         if(prj&&prj.datum&&prj.datum!=='WGS84')info+=` · المرجع ${prj.datum}: قد تظهر إزاحة عن الصورة الفضائية (حتى ٢٠٠م مع عين العبد).`}
@@ -1500,7 +1782,7 @@ async function importFile(f){const name=f.name.toLowerCase();let list=[],info=''
       else throw new Error('لم أجد ملف .shp أو .kml داخل الـ ZIP.')}
     else if(name.endsWith('.kml')){list=parseKML(await f.text());info='ملف KML'}
     else{const j=JSON.parse(await f.text());const feats=j.type==='FeatureCollection'?j.features:j.type==='Feature'?[j]:[{type:'Feature',geometry:j,properties:{}}];
-      feats.forEach((ft,i)=>{const ring=largest(ringsFromGeo(ft.geometry).map(poly=>poly[0].map(c2=>({x:+c2[0],y:+c2[1]}))));if(ring)list.push({label:pickLabel(ft.properties,list.length),ring,prj:null})});
+      feats.forEach((ft,i)=>{const ring=largest(ringsFromGeo(ft.geometry).map(poly=>poly[0].map(c2=>({x:+c2[0],y:+c2[1]}))));if(ring)list.push({label:pickLabel(ft.properties,list.length),ring,prj:null,attrs:ft.properties||{}})});
       info='ملف GeoJSON'}
   }catch(e){toast('تعذّر قراءة الملف: '+(e.message||e));return}
   if(!list.length){toast('لم أجد أي قطعة (مضلع) في الملف.');return}
@@ -1510,8 +1792,8 @@ function parseKML(txt){const doc=new DOMParser().parseFromString(txt,'applicatio
   [...doc.getElementsByTagName('Placemark')].forEach(pm=>{const nm=(pm.getElementsByTagName('name')[0]||{}).textContent||'';
     const polys=[...pm.getElementsByTagName('Polygon')];const rings=polys.map(pg=>{const ob=pg.getElementsByTagName('outerBoundaryIs')[0]||pg;const co=(ob.getElementsByTagName('coordinates')[0]||{}).textContent||'';
       return co.trim().split(/\s+/).map(t=>t.split(',').map(Number)).filter(a=>a.length>=2&&!isNaN(a[0])).map(a=>({x:a[0],y:a[1]}))});
-    const ring=largest(rings);if(ring)out.push({label:'قطعة '+(out.length+1)+(nm?' — '+nm.trim().slice(0,40):''),ring,prj:{kind:'geo'}})});return out}
-function applyParcel(pc){let kind=pc.prj?.kind,zone=pc.prj?.zone;const r=pc.ring,looksGeo=r.every(p=>Math.abs(p.x)<=180&&Math.abs(p.y)<=90);
+    const ring=largest(rings);if(ring)out.push({label:'قطعة '+(out.length+1)+(nm?' — '+nm.trim().slice(0,40):''),ring,prj:{kind:'geo'},attrs:{name:nm.trim()}})});return out}
+function applyParcel(pc){CUR_PC=pc;S.tx.parcelNo='';S.tx.streetEdge='';gisRefreshNos();let kind=pc.prj?.kind,zone=pc.prj?.zone;const r=pc.ring,looksGeo=r.every(p=>Math.abs(p.x)<=180&&Math.abs(p.y)<=90);
   if(!kind||kind==='unknown'){if(looksGeo)kind='geo';else{kind='utm';zone=clamp(Math.round(+S.zone)||38,1,60);toast(`لا يوجد إسقاط واضح؛ اعتبرت الإحداثيات UTM نطاق ${zone}. غيّره من قسم الإحداثيات إن لزم.`)}}
   const def=S.projType==='land'?0:roleSb('side');
   if(kind==='geo'){let la=0,lo=0;r.forEach(p=>{la+=p.y;lo+=p.x});la/=r.length;lo/=r.length;const F=localFrame(la,lo);
@@ -1526,18 +1808,20 @@ function dedupe(pts){const out=[];pts.forEach(p=>{const q=out.at(-1);if(!q||Math
   for(let k=0;k<out.length&&out.length>3;){const a=out[(k-1+out.length)%out.length],b=out[k],c2=out[(k+1)%out.length];
     const ar=Math.abs(cross(sub(b,a),sub(c2,b)))/2,base=Math.hypot(c2.x-a.x,c2.y-a.y)||1;if(ar/base<0.01)out.splice(k,1);else k++}return out}
 $('#parcelSel').onchange=e=>{const pc=PARCELS[+e.target.value];if(pc)applyParcel(pc)};
+$('#parcelNoField').onchange=e=>{S.gisNoField=e.target.value;gisRefreshNos();persist();schedule()};
 const pdrop=$('#parcelDrop');pdrop.onclick=()=>$('#parcelFile').click();pdrop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('#parcelFile').click()}};
 $('#parcelFile').onchange=e=>{const f=e.target.files[0];if(f)importFile(f);e.target.value=''};
 pdrop.addEventListener('dragover',e=>{e.preventDefault();pdrop.classList.add('on')});pdrop.addEventListener('dragleave',()=>pdrop.classList.remove('on'));
 pdrop.addEventListener('drop',e=>{e.preventDefault();pdrop.classList.remove('on');const f=e.dataTransfer.files[0];if(f)importFile(f)});
 $('#pickImg').onclick=()=>{$('#imgFile').click()};
 $('#demoBtn').onclick=()=>{const d=defaults();Object.assign(S,{coordMode:d.coordMode,zone:d.zone,refLat:d.refLat,refLon:d.refLon,verts:d.verts});S.sheet.vr=d.sheet.vr;S.sheet.panX=0;S.sheet.panY=0;
-  PARCELS=[];$('#parcelPick').hidden=true;$('#importInfo').textContent='';structural();syncInputs();if(map)showCurrentPlot(true)};
+  PARCELS=[];CUR_PC=null;S.gis=defaults().gis;$('#parcelPick').hidden=true;$('#parcelNoPick').hidden=true;gisRefreshNos();$('#importInfo').textContent='';structural();syncInputs();if(map)showCurrentPlot(true)};
 
 /* boot */
-fillScaleSelect();syncInputs();renderVerts();updateModeHint();applyProjType();
+fillScaleSelect();syncInputs();renderVerts();updateModeHint();applyProjType();gisRefreshNos();txHints();
 try{const im=localStorage.getItem(STORE_IMG);if(im)loadImage(im,false)}catch(e){}
 try{const tp=localStorage.getItem(STORE_TXP);if(tp)loadTxPhoto(tp,false)}catch(e){}
+for(const k in TXSLOT){try{const d=localStorage.getItem(TXSLOT[k].store);if(d)loadTxSlot(k,d,false)}catch(e){}}
 render();setView(HAD||IN_CLAUDE?'sheet':'map');
 if(document.fonts){Promise.all(['400','600','700'].map(w=>document.fonts.load(`${w} 16px "IBM Plex Sans Arabic"`,'مسجد'))).then(()=>schedule()).catch(()=>{})}
 </script>
