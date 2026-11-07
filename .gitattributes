@@ -1,0 +1,3 @@
+# Third-party library: kept byte-identical to the npm release
+# (its SHA-256 is recorded in vendor/polygon-clipping/README.txt), so no line-ending conversion
+vendor/** -text

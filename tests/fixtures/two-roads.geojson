@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"STREET_NAME":"ROAD-A","WIDTH_M":18},"geometry":{"type":"LineString","coordinates":[[39.8231,21.4250],[39.8242,21.4250]]}},{"type":"Feature","properties":{"STREET_NAME":"ROAD-B","WIDTH_M":22},"geometry":{"type":"LineString","coordinates":[[39.8281,21.4250],[39.8292,21.4250]]}}]}

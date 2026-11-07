@@ -1,0 +1,16 @@
+# Backups and older copies are never published
+*_backup*/
+GIS_Parcel_Planner_With_More/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Dependencies, test output and temporary files
+node_modules/
+*.log
+*.tmp
+*~
