@@ -204,7 +204,11 @@ table.vt{border-collapse:collapse;width:100%;font-size:12px}
 #bldInfo{max-height:24vh;overflow-y:auto}
 /* zoning requirements: source badges and the geometric + regulatory result table */
 .zsrc{display:inline-block;margin-inline-start:4px;padding:0 5px;border-radius:4px;font:500 10px var(--f-ui);vertical-align:1px;background:var(--sunk);color:var(--muted)}
-.zsrc:empty{display:none}.zsrc.gis{background:var(--ok-soft);color:var(--ok)}.zsrc.rule{background:var(--brass-soft);color:var(--brass)}.zsrc.manual{background:var(--accent-soft);color:var(--accent)}
+.zsrc:empty{display:none}.zsrc.gis{background:var(--ok-soft);color:var(--ok)}.zsrc.rule{background:var(--brass-soft);color:var(--brass)}.zsrc.manual{background:var(--accent-soft);color:var(--accent)}.zsrc.user{background:var(--sunk);color:var(--brass);border:1px dashed var(--brass)}
+.mapdiag{background:rgba(20,20,20,.75);border-radius:4px;color:#fff;font:600 11px var(--f-ui);text-align:center;white-space:nowrap}
+.edge-diag{margin-top:10px;padding:8px;border:1px dashed var(--line,#999);border-radius:6px}.diag-list{display:flex;flex-direction:column;gap:6px;margin:6px 0}.diag-card{padding:6px 8px;border-radius:6px;background:var(--sunk);border-inline-start:3px solid #e0607e;font-size:12px;line-height:1.6}.diag-card.ok{border-inline-start-color:var(--ok)}
+.diag-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.diag-card .good{color:var(--ok);font-weight:600}
+.mapsb{background:none;border:0;color:#7fd3ff;font:700 11px var(--f-ui);text-shadow:0 0 3px #000,0 0 2px #000;white-space:nowrap;text-align:center}
 .zr-out{display:grid;gap:8px}
 table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .zr-t td{padding:6px 7px;border-top:1px solid var(--line);vertical-align:top}.zr-t tr:first-child td{border-top:0}
@@ -246,12 +250,15 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
     <details open id="secImport">
       <summary><span class="no">01</span><span class="tt">استيراد الأرض</span><small id="sumArea"></small></summary>
       <div class="sec">
-        <div class="drop" id="parcelDrop" tabindex="0" role="button"><b>اسحب ملف الأرض هنا أو اضغط للاختيار</b><br>ZIP Shapefile (SHP + SHX + DBF + PRJ) · GeoJSON · KML / KMZ</div>
+        <div class="drop" id="parcelDrop" tabindex="0" role="button"><b>اسحب ملف الأرض هنا أو اضغط للاختيار</b><br>ZIP Shapefile (SHP + SHX + DBF + PRJ) · GeoJSON · KML / KMZ<br>ZIP واحد يمكن أن يحوي طبقة القطع وطبقة الشوارع معًا</div>
         <input type="file" id="parcelFile" accept=".zip,.geojson,.json,.kml,.kmz" hidden>
-        <div class="btns"><button id="pickMap">رسم قطعة على الخريطة</button><button id="pickImg">رفع صورة جوية</button><button id="demoBtn">قطعة تجريبية</button></div>
+        <input type="file" id="roadFile" accept=".zip,.geojson,.json" hidden>
+        <div class="btns"><button id="pickMap">رسم قطعة على الخريطة</button><button id="pickImg">رفع صورة جوية</button><button id="roadBtn">إضافة طبقة الشوارع</button></div>
         <div class="row" id="parcelPick" hidden><label for="parcelSel">القطعة المختارة</label><select id="parcelSel"></select></div>
         <div class="row" id="parcelNoPick" hidden><label for="parcelNoField">حقل رقم القطعة</label><select id="parcelNoField"></select></div>
         <div class="hint" id="importInfo"></div>
+        <div class="btns" id="planBtns" hidden><button class="sm pri" id="planRun">تحليل المخطط كاملًا</button><button class="sm" id="planCsv">تصدير نتائج القطع CSV</button></div>
+        <div class="hint" id="planInfo"></div>
       </div>
     </details>
 
@@ -294,7 +301,10 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
           <div><label for="dRear">خلفي م</label><input id="dRear" type="number" step="0.5" min="0" data-k="sbDef.rear"></div>
         </div>
         <div class="vt-wrap"><table class="vt"><thead><tr><th>ضلع</th><th>الوظيفة</th><th>ارتداد م</th><th>اسم الشارع / الجار</th></tr></thead><tbody id="sbody"></tbody></table></div>
-        <div class="btns"><button class="sm" id="applyRoles">تطبيق الافتراضي على كل الأضلاع</button><button class="sm" id="sbZero">تصفير الارتدادات</button></div>
+        <div class="btns"><button class="sm" id="applyRoles">تطبيق الافتراضي على كل الأضلاع</button><button class="sm" id="sbZero">تصفير الارتدادات</button><button class="sm pri" id="sbStreets">تطبيق ارتدادات الشوارع</button></div>
+        <div id="edgeDiag" class="edge-diag" hidden></div>
+        <div class="row" id="roadWPick" hidden><label for="roadWidthSel">حقل عرض الشارع في طبقة الطرق</label><select id="roadWidthSel"></select></div>
+        <div class="hint" id="roadSbInfo">حمّل طبقة الشوارع (ZIP فيه خطوط بحقل عرض الشارع) لتُحسب الارتدادات تلقائيًا عند اختيار كل قطعة.</div>
       </div>
     </details>
 
@@ -317,9 +327,22 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
           <div><label for="zrUseTxt">الاستخدام كما في المصدر</label><input id="zrUseTxt" type="text" data-k="tx.zUseTxt" placeholder="مثال: سكني فلل"></div>
         </div>
         <div class="hint" id="zrUseHint"></div>
+        <div class="sub">قواعد المستخدم — ليست اشتراطات رسمية موثقة</div>
+        <label class="chk"><input type="checkbox" id="urOn"> تطبيق قواعد المستخدم تلقائيًا على كل قطعة عند اختيارها</label>
+        <div class="row2">
+          <div><label for="urGround">أقصى مسطح للدور الأرضي ٪ من الأرض</label><input id="urGround" type="text" inputmode="decimal" dir="ltr" data-ur="ground"></div>
+          <div><label for="urUpper">أقصى مسطح للدور العلوي ٪ من الأرض</label><input id="urUpper" type="text" inputmode="decimal" dir="ltr" data-ur="upper"></div>
+        </div>
+        <div class="row3">
+          <div><label for="urDiv">الأمامي = عرض الشارع ÷</label><input id="urDiv" type="text" inputmode="decimal" dir="ltr" data-ur="div"></div>
+          <div><label for="urMin">حد أدنى م</label><input id="urMin" type="text" inputmode="decimal" dir="ltr" data-ur="min"></div>
+          <div><label for="urMax">حد أقصى م</label><input id="urMax" type="text" inputmode="decimal" dir="ltr" data-ur="max"></div>
+        </div>
+        <div class="hint" id="urInfo"></div>
         <div class="sub">الاشتراطات</div>
         <div class="row2">
-          <div><label for="txRatio">نسبة التغطية القصوى ٪ <span class="zsrc" data-zsrc="ratio"></span></label><input id="txRatio" type="text" inputmode="decimal" dir="ltr" data-k="tx.ratio" placeholder="غير محدد"></div>
+          <div><label for="txRatio">نسبة التغطية القصوى (الدور الأرضي) ٪ <span class="zsrc" data-zsrc="ratio"></span></label><input id="txRatio" type="text" inputmode="decimal" dir="ltr" data-k="tx.ratio" placeholder="غير محدد"></div>
+          <div><label for="txUpRatio">نسبة الدور العلوي ٪ من الأرض <span class="zsrc" data-zsrc="upRatio"></span></label><input id="txUpRatio" type="text" inputmode="decimal" dir="ltr" data-k="tx.upRatio" placeholder="غير محدد"></div>
           <div><label for="txFloors">عدد الأدوار <span class="zsrc" data-zsrc="floors"></span></label><input id="txFloors" type="text" inputmode="numeric" dir="ltr" data-k="tx.floors" placeholder="غير محدد"></div>
           <div><label for="txHeight">الارتفاع المسموح م <span class="zsrc" data-zsrc="height"></span></label><input id="txHeight" type="text" inputmode="decimal" dir="ltr" data-k="tx.height" placeholder="غير محدد"></div>
           <div><label for="txFar">معامل البناء FAR <span class="zsrc" data-zsrc="far"></span></label><input id="txFar" type="text" inputmode="decimal" dir="ltr" data-k="tx.far" placeholder="غير محدد"></div>
@@ -486,6 +509,7 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
           <div><label for="txRot">تدوير يدوي (درجة)</label><input id="txRot" type="number" step="1" min="-180" max="180" data-k="tx.rot"></div>
           <div><label for="txOrient">اتجاه رسم القطعة</label><select id="txOrient" data-k="tx.orient"><option value="street">الشارع لأسفل</option><option value="north">الشمال لأعلى</option><option value="sheet">نفس دوران اللوحة</option></select></div>
         </div>
+        <div class="row wide"><label for="txStyle">شكل النموذج</label><select id="txStyle" data-k="tx.style"><option value="ref">مطابق للتصميم المرجعي (بدون شريط الحساب)</option><option value="full">تفصيلي: مع شريط الحساب الهندسي والنظامي والملاحظات</option></select></div>
         <div class="row wide"><label for="txAuthority">الجهة / عنوان رأس النموذج (لا يدل على اعتماد رسمي)</label><input id="txAuthority" type="text" data-k="tx.authority" placeholder="GIS Parcel Planner"></div>
         <div class="row wide"><label for="txLoc">سطر الموقع (المدينة › المخطط)</label><input id="txLoc" type="text" data-k="tx.loc" placeholder="مثال: مكة المكرمة › مخطط حي الرصيفة الجديد"></div>
         <div class="sub">بيانات كارت القطعة</div>
@@ -511,6 +535,19 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
           <div><label for="txStatus">حالة القطعة</label><input id="txStatus" type="text" data-k="tx.status"></div>
         </div>
         <div class="row wide"><label for="txNotes">الملاحظات</label><input id="txNotes" type="text" data-k="tx.notes"></div>
+        <div class="sub">القيم الافتراضية للنموذج (لكل القطع)</div>
+        <label class="chk"><input type="checkbox" id="tdOn" data-k="txDef.on"> استخدام هذه القيم في أي قطعة خاناتها فارغة</label>
+        <div class="hint">قيم يكتبها المستخدم لكل القطع، وليست اشتراطات رسمية موثقة. أي قيمة مكتوبة للقطعة نفسها في الخانات أعلاه أو قادمة من GIS تُقدَّم عليها.</div>
+        <div class="row wide"><label for="tdPark">اشتراطات مواقف السيارات</label><input id="tdPark" type="text" data-k="txDef.parkTxt"></div>
+        <div class="row wide"><label for="tdFloor">توصيف الأدوار</label><input id="tdFloor" type="text" data-k="txDef.floorDesc"></div>
+        <div class="row wide"><label for="tdSpecial">الاشتراطات الخاصة</label><input id="tdSpecial" type="text" data-k="txDef.special"></div>
+        <div class="row2">
+          <div><label for="tdArchLbl">عنوان بند العمارة</label><input id="tdArchLbl" type="text" data-k="txDef.archLbl"></div>
+          <div><label for="tdArch">اشتراطات العمارة (ما بين القوسين يظهر كرابط)</label><input id="tdArch" type="text" data-k="txDef.arch"></div>
+          <div><label for="tdUrban">النطاق العمراني</label><input id="tdUrban" type="text" data-k="txDef.urban"></div>
+          <div><label for="tdStatus">حالة القطعة</label><input id="tdStatus" type="text" data-k="txDef.status"></div>
+        </div>
+        <div class="row wide"><label for="tdNotes">الملاحظات</label><input id="tdNotes" type="text" data-k="txDef.notes"></div>
         <div class="sub">صورة اللوجو (أعلى يمين النموذج)</div>
         <div class="drop" id="txLogoDrop" tabindex="0" role="button">اسحب صورة اللوجو هنا أو اضغط لاختيارها (PNG بخلفية شفافة أفضل)</div>
         <input type="file" id="txLogoFile" accept="image/*" hidden>
@@ -525,6 +562,7 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
         <div class="drop" id="txDrop" tabindex="0" role="button">اسحب صورة الموقع هنا أو اضغط لاختيارها</div>
         <input type="file" id="txFile" accept="image/*" hidden>
         <div class="hint" id="txPhotoInfo">لا توجد صورة بعد.</div>
+        <div class="row wide"><label for="txPhotoAt">تاريخ التصوير (يُقرأ من اسم الصورة، ويظهر التاريخ فوق «الملاحظات»)</label><input id="txPhotoAt" type="text" dir="ltr" data-k="tx.photoAt" placeholder="2026-09-21 07:02:37"></div>
         <div class="hint">بدون صورة باركود منفصلة: الصورة تأخذ إطار التوثيق كله وتظهر كاملة بدون أي قص، بما فيها شريط الباركود إن كان جزءًا منها. مع صورة باركود منفصلة: تظهر الصورة أعلى الإطار والباركود أسفلها.</div>
         <div class="sub">صورة الباركود / QR الجاهزة (أسفل صورة الموقع)</div>
         <div class="drop" id="txBarDrop" tabindex="0" role="button">اسحب صورة كارت الباركود الجاهزة هنا أو اضغط لاختيارها</div>
@@ -634,17 +672,18 @@ function rectVerts(L,Wd,bear){const d={x:Math.sin(bear*D2R),y:Math.cos(bear*D2R)
   const cx=(d.x*L+n.x*Wd)/2,cy=(d.y*L+n.y*Wd)/2;return pts.map(p=>({x:+(p.x-cx).toFixed(3),y:+(p.y-cy).toFixed(3)}))}
 function today(){const d=new Date();return d.getFullYear()+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')}
 function defaults(){
-  const sb=[20,12,20.5,10],roles=['front','side','rear','side'];
-  return {outlineColor:'#006c73',edgeColors:[],projType:'mosque',coordMode:'local',zone:38,refLat:24.7135,refLon:46.8520,
-    verts:rectVerts(350,200,35).map((p,i)=>({x:p.x,y:p.y,sb:sb[i],role:roles[i],name:i===0?'الطريق الدائري':''})),sbDef:{front:6,side:3,rear:3},
+  return {outlineColor:'#006c73',edgeColors:[],projType:'land',coordMode:'local',zone:38,refLat:24.7135,refLon:46.8520,
+    verts:[],sbDef:{front:6,side:3,rear:3},urules:{on:true,div:5,min:3,max:6,ground:65,upper:75},
+    // form defaults for every parcel (user values, not official); a parcel's own value always comes first
+    txDef:{on:true,parkTxt:'1.5 موقف لكل وحدة سكنية',floorDesc:'دور أرضي + ثلاث أدوار متكررة + ملحق علوي',special:'لا يوجد',archLbl:'اشتراطات عمارة مكة',arch:'مصدر العمارة التقليدية (عمارة مكة التقليدية)',urban:'داخل النطاق العمراني',status:'مبنية',notes:'-'},
     qAuto:true,qManual:244,cap:6500,womenPct:15,aPer:1.2,hallRatio:1.6,sahnRatio:0.45,ablPer:0.05,minaret:true,minSide:'right',minSize:5,
     housing:true,housingArea:320,parkRatio:12,stallW:2.5,stallL:5.5,aisle:6,buf:6,parkLimit:false,parkEdge:-1,parkZone:'mosque',mosque:null,house:null,layout:null,geom:null,
     img:{src:'esri',maxZ:19,show:true,drag:false,opacity:0.9,widthM:600,rot:0,cx:0,cy:0},
     sheet:{paper:'A1',orient:'landscape',scale:'auto',vr:-55,panX:0,panY:0,legend:true,table:true,dims:true,notes:true,coords:true,zoning:true,digits:'arab',planTitle:'المخطط العام للموقع'},
-    tb:{office:'Drconsultancy',officeSub:'استشارات هندسية',project:'مسجد جامع (مثال)',client:'',location:'',title:'المخطط العام — توزيع الموقع',no:'A-01',rev:'0',date:today(),drawn:'',checked:'',
+    tb:{office:'Drconsultancy',officeSub:'استشارات هندسية',project:'',client:'',location:'',title:'المخطط العام — توزيع الموقع',no:'A-01',rev:'0',date:today(),drawn:'',checked:'',
       notes:'الأبعاد بالمتر.\nاتجاه القبلة محسوب من إحداثيات الموقع على الشمال الحقيقي.\nالمخطط مبدئي للدراسة ويخضع لاشتراطات الجهات المختصة.'},
     exp:{dpi:200,coords:'utm',dxfLang:'ar'},bld:{title:'',maxRatio:''},
-    tx:{parcelNo:'',planNo:'',authority:'',floorDesc:'',loc:'',bType:'',floors:'',height:'',ratio:'',far:'',parkPct:'',
+    tx:{style:'ref',photoAt:'',parcelNo:'',planNo:'',authority:'',floorDesc:'',loc:'',bType:'',floors:'',height:'',ratio:'',upRatio:'',zGis:{},far:'',parkPct:'',
       parkTxt:'',uses:'',notUses:'',
       special:'',archLbl:'اشتراطات العمارة',arch:'',
       adv:'',
@@ -652,13 +691,16 @@ function defaults(){
       street:'',streetW:'',streetEdge:'',orient:'street',rot:0,planName:'',district:'',municipality:'',planUse:'',subUse:'',parcelUse:'',conflict:'',urban:'',status:'',notes:'',
       // zoning requirements (الاشتراطات التنظيمية) of the current parcel; zSrc = where each value came from: 'gis' | 'manual' | 'rule' | ''
       city:'',amana:'',zUse:'',zUseTxt:'',farNA:false,zExc:[],zRef:'',zRefDate:'',zStatus:'',zRule:'',
-      zSrc:{city:'',amana:'',municipality:'',district:'',planNo:'',parcelNo:'',zUse:'',ratio:'',floors:'',height:'',far:'',farNA:'',parkPct:'',parkTxt:'',special:'',zRef:'',zRefDate:'',zStatus:''}},
+      zSrc:{city:'',amana:'',municipality:'',district:'',planNo:'',parcelNo:'',zUse:'',ratio:'',upRatio:'',floors:'',height:'',far:'',farNA:'',parkPct:'',parkTxt:'',special:'',zRef:'',zRefDate:'',zStatus:''}},
     gis:{no:'',noKey:'',street:'',planName:'',planNo:'',district:'',muni:'',use:''},gisNoField:''};
 }
 function merge(d,s){if(!s||typeof s!=='object')return d;for(const k in d){if(s[k]===undefined)continue;
   if(d[k]&&typeof d[k]==='object'&&!Array.isArray(d[k]))d[k]=merge(d[k],s[k]);else d[k]=s[k]}return d}
 let S=defaults(),HAD=false;
 try{const raw=localStorage.getItem(STORE);if(raw){S=merge(defaults(),JSON.parse(raw));HAD=true}}catch(e){}
+// the old opening example (mosque on a 350×200 demo parcel) is not kept: an empty project starts on the map
+if(S.tb.project==='مسجد جامع (مثال)')S.tb.project='';
+if(S.verts.length===4&&S.verts[0]?.name==='الطريق الدائري'&&!localStorage.getItem(PARCEL_LAYER_KEY)){S.verts=[];S.geom=null;S.mosque=null;S.house=null;S.layout=null;S.projType='land';HAD=false}
 let IMG=null,IMGDATA=null,M=null,PT=null,LAY=null,c=null,K=1,zoom=1;
 function persist(){try{localStorage.setItem(STORE,JSON.stringify(S))}catch(e){}try{if(typeof CUR_PC!=='undefined'&&CUR_PC?.stableId)queueMainParcelSnapshot()}catch(e){}}
 let parcelSnapshotTimer=0;
@@ -675,7 +717,7 @@ async function restoreMainParcelSnapshot(pc){if(!window.ParcelStore||!pc?.stable
   // no saved state yet: this parcel's current (imported) state is saved as before
   if(!snapshot||snapshot.stableId!==pc.stableId){if(typeof CUR_PC!=='undefined'&&CUR_PC===pc)queueMainParcelSnapshot();return false}
   if(typeof CUR_PC!=='undefined'&&CUR_PC!==pc)return false;   // another parcel was chosen while reading
-  S.verts=snapshot.verts.map(v=>({...v}));if(snapshot.geom!==undefined&&(!snapshot.geom||snapshot.geom.parcelId===pc.stableId))S.geom=snapshot.geom;S.coordMode=snapshot.coordMode;S.zone=snapshot.zone;S.refLat=snapshot.refLat;S.refLon=snapshot.refLon;S.gis={...snapshot.gis};S.gisNoField=snapshot.gisNoField;S.tx={...S.tx,...snapshot.tx};zrAutoApply(snapshot.at||0);
+  S.verts=snapshot.verts.map(v=>({...v}));if(snapshot.geom!==undefined&&(!snapshot.geom||snapshot.geom.parcelId===pc.stableId))S.geom=snapshot.geom;S.coordMode=snapshot.coordMode;S.zone=snapshot.zone;S.refLat=snapshot.refLat;S.refLon=snapshot.refLon;S.gis={...snapshot.gis};S.gisNoField=snapshot.gisNoField;S.tx={...S.tx,...snapshot.tx,style:S.tx.style,photoAt:S.tx.photoAt??''};zrAutoApply(snapshot.at||0);userApply();
   if(snapshot.layout){S.mosque=snapshot.layout.mosque;S.house=snapshot.layout.house;S.layout=snapshot.layout.layout;S.parkEdge=snapshot.layout.parkEdge??-1;S.parkZone=snapshot.layout.parkZone||'mosque'}
   syncInputs();renderVerts();M=compute();txHints();schedule();if(map)showCurrentPlot(true);persist();return true}
 function getP(o,p){return p.split('.').reduce((a,k)=>a==null?a:a[k],o)}
@@ -965,7 +1007,8 @@ function drawPlan(m,L){
   if(S.sheet.dims)m.edges.forEach(e=>{const pa=w2p(e.a),pb=w2p(e.b),mid={x:(pa.x+pb.x)/2,y:(pa.y+pb.y)/2},on=pvec(e.nOut);
     let ang=Math.atan2(pb.y-pa.y,pb.x-pa.x);if(ang>Math.PI/2)ang-=Math.PI;if(ang<=-Math.PI/2)ang+=Math.PI;
     const t=(e.name?e.name+'  —  ':'')+fmt(e.len,2)+' م';txt(t,mid.x+on.x*fs*1.55,mid.y+on.y*fs*1.55,fs*0.8,{a:'center',b:'middle',rot:ang,w:500});
-    if((m.bOk||m.zones.length)&&e.sb>0&&e.sb*PT.k>fs*0.9)txt('ارتداد '+fmt(e.sb,e.sb%1?1:0)+' م',mid.x-on.x*(e.sb*PT.k/2),mid.y-on.y*(e.sb*PT.k/2),Math.min(fs*0.62,e.sb*PT.k*0.55),{a:'center',b:'middle',rot:ang,c:COL.sb})});
+    if((m.bOk||m.zones.length)&&e.sb>0){const sd=Math.round(e.sb*100)%10?2:Math.round(e.sb*10)%10?1:0,lab='ارتداد '+fmt(e.sb,sd)+' م',wide=e.sb*PT.k>fs*0.9,off=wide?e.sb*PT.k/2:e.sb*PT.k+fs*0.45;
+      txt(lab,mid.x-on.x*off,mid.y-on.y*off,wide?Math.min(fs*0.62,e.sb*PT.k*0.55):fs*0.5,{a:'center',b:'middle',rot:ang,c:COL.sb})}});
   drawExtraRings(m,fs);
   if(zd){const big=zd.parts.reduce((A,B)=>ringsArea(B)>ringsArea(A)?B:A),q=w2p(zoneAnchor(big)),pp=big[0].map(w2p),bb=bbox(pp),sz=fs*0.62,
       s1='توزيع التغطية '+fmt(Math.round(zst.Z.footprint*100)/100,2)+' م²';
@@ -1043,6 +1086,7 @@ function zoningRows(m){const st=zrFor(m);if(!st)return[];const Z=st.Z,pct=S.shee
   const r=[['تصنيف الاستخدام',t.use],['إجمالي مساحة الأرض',a(Z.A)],['داخل الارتدادات',Z.G!==null?a(Z.G)+(Z.gState==='partial'?' (مبدئية)':''):'غير محددة'],
     ['حد نسبة التغطية',Z.covPct===null?MS:fmt(Z.covPct,Z.covPct%1?1:0)+pct+' ← '+a(Z.covTotal)],
     ['أقصى مسطح أرضي',Z.footprint!==null?a(Z.footprint):Z.footState==='geo-only'?MS:'غير محدد'],
+    ...(Z.upPct!==null?[['أقصى مسطح علوي (لكل دور)',Z.upper!==null?a(Z.upper)+' ('+fmt(Z.upPct,Z.upPct%1?1:0)+pct+')':'غير محدد']]:[]),
     ['القيد الأقوى',Z.footprint!==null?(Z.binding==='setback'?'الارتدادات':Z.binding==='coverage'?'نسبة التغطية':'متساويان'):'—'],
     ['مسطحات الأدوار',Z.gross!==null?a(Z.gross)+(Z.grossState!=='ok'?' (مبدئي)':''):MS],
     ['غير قابل للبناء',Z.nbTotal!==null?a(Z.nbTotal):'غير محدد']];
@@ -1144,8 +1188,8 @@ $('#sbody').addEventListener('focusout',()=>{setTimeout(()=>{if(!$('#sbody').con
 $('#sbody').addEventListener('mouseover',e=>{const tr=e.target.closest('tr');if(tr&&HL!==+tr.dataset.edge&&!$('#sbody').contains(document.activeElement)){HL=+tr.dataset.edge;schedule()}});
 $('#sbody').addEventListener('mouseleave',()=>{if(!$('#sbody').contains(document.activeElement)){HL=-1;schedule()}});
 const roleSb=r=>r==='none'?0:(+S.sbDef[r]||0);
-$('#applyRoles').onclick=()=>{S.verts.forEach(v=>{v.sb=roleSb(v.role||'side');v.sbSrc=''});renderSB();persist();schedule()};
-$('#sbZero').onclick=()=>{S.verts.forEach(v=>{v.sb=0;v.sbSrc='planner'});renderSB();persist();schedule()};
+$('#applyRoles').onclick=()=>{S.verts.forEach(v=>{v.sb=roleSb(v.role||'side');v.sbSrc='';v.manual=true});renderSB();persist();schedule()};
+$('#sbZero').onclick=()=>{S.verts.forEach(v=>{v.sb=0;v.sbSrc='planner';v.manual=true});renderSB();persist();schedule()};
 function syncInputs(){document.querySelectorAll('[data-k]').forEach(el=>{const v=getP(S,el.dataset.k);if(el.type==='checkbox')el.checked=!!v;else el.value=v??''});$('#capR').value=S.cap;
   if(S.sheet.scale!=='auto')$('#scale').value=String(S.sheet.scale);$('#txStripBox').hidden=!S.tx.qrStrip;if(typeof zrExcRender==='function')zrExcRender()}
 function structural(){S.mosque=null;S.house=null;S.layout=null;renderVerts();persist();schedule()}
@@ -1161,7 +1205,7 @@ $('#side').addEventListener('input',e=>{const el=e.target;
   if(el.dataset.zx!=null){zrExcInput(el);persist();schedule();return}
   // sbSrc / nameSrc tell the transaction form a value the user set from a default: role defaults leave sbSrc empty,
   // a typed setback is 'planner'; a street name applied from «مزيد» stays a street name when corrected here
-  if(el.dataset.vi!=null){const i=+el.dataset.vi,f=el.dataset.vf,v=S.verts[i];if(f==='role'){v.role=el.value;v.sb=roleSb(el.value);v.sbSrc='';const sbi=document.querySelector(`#sbody input[data-vi="${i}"][data-vf="sb"]`);if(sbi)sbi.value=v.sb}
+  if(el.dataset.vi!=null){const i=+el.dataset.vi,f=el.dataset.vf,v=S.verts[i];if(['role','sb','name'].includes(f))v.manual=true;if(f==='role'){v.role=el.value;v.sb=roleSb(el.value);v.sbSrc='';const sbi=document.querySelector(`#sbody input[data-vi="${i}"][data-vf="sb"]`);if(sbi)sbi.value=v.sb}
     else if(f==='name'){v.name=el.value;v.nameSrc=!el.value.trim()?'':v.nameSrc==='streets'?'streets':'manual'}
     else{v[f]=parseFloat(el.value)||0;if(f==='sb')v.sbSrc='planner'}persist();schedule()}});
 $('#vbody').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(!b)return;if(S.verts.length<=3){toast('الأرض تحتاج ثلاث نقاط على الأقل.');return}S.verts.splice(+b.dataset.del,1);structural()});
@@ -1593,14 +1637,15 @@ function txNumber(v){
 /* auto rules: max height = 4.30 + max floors; front setback = street width / 5, at least 3 m */
 const TX_H0=4.30,TX_FRONT_DIV=5,TX_FRONT_MIN=3;
 function txAutoHeight(fl){return fl!==null&&Number.isInteger(fl)&&fl>0?+(TX_H0+fl).toFixed(2):null}
-function txFrontSb(w){const v=txNumber(w);return v!==null&&v>0?+Math.max(TX_FRONT_MIN,v/TX_FRONT_DIV).toFixed(2):null}
+function txFrontSb(w){const v=txNumber(w);if(v===null||!(v>0))return null;if(ZR&&S.urules&&S.urules.on!==false)return ZR.userFront(v,S.urules);return+Math.max(TX_FRONT_MIN,v/TX_FRONT_DIV).toFixed(2)}
 // street edge(s): the one chosen in the transaction settings, else the edges marked "front"
 function txStreetEdges(){const n=S.verts.length,se=parseInt(S.tx.streetEdge,10);if(Number.isInteger(se)&&se>=0&&se<n)return[se];return S.verts.map((v,i)=>i).filter(i=>(S.verts[i].role||'side')==='front')}
 function txApplyFront(){const sb=txFrontSb(S.tx.streetW);txHints();if(sb===null)return;const es=txStreetEdges();
   if(!es.length){toast('اختر «ضلع الشارع» ليُطبَّق عليه الارتداد الأمامي.');return}
   es.forEach(i=>{S.verts[i].sb=sb;S.verts[i].sbSrc='planner';S.verts[i].role='front'});renderVerts();toast(`الارتداد الأمامي = ${nE(sb,2)} م على ضلع ${es.map(i=>i+1).join('، ')}`)}
 function txHints(){const h=$('#txHeight'),f=txAutoHeight(txNumber(S.tx.floors));if(h)h.placeholder=f!==null?`غير محدد · تقدير النموذج ${nE(f,2)}`:'غير محدد';
-  const w=$('#txFrontInfo'),sb=txFrontSb(S.tx.streetW);if(w)w.textContent=sb!==null?`الارتداد الأمامي = عرض الشارع ÷ 5 = ${nE(Math.max(0,txNumber(S.tx.streetW)/5),2)} م ← يُطبَّق ${nE(sb,2)} م (حد أدنى 3 م) على ضلع الشارع.`:'أدخل عرض الشارع ليُحسب الارتداد الأمامي تلقائيًا (عرض الشارع ÷ 5، بحد أدنى 3 م).'}
+  const w=$('#txFrontInfo'),sb=txFrontSb(S.tx.streetW);if(w&&ZR&&S.urules&&S.urules.on!==false){const c=ZR.userCfg(S.urules);w.textContent=sb!==null?`الارتداد الأمامي = عرض الشارع ÷ ${nE(c.div,2)} (بين ${nE(c.min,2)} و${nE(c.max,2)} م، قاعدة المستخدم) ← ${nE(sb,2)} م على ضلع الشارع.`:'أدخل عرض الشارع ليُحسب الارتداد الأمامي (قاعدة المستخدم: العرض ÷ 5 بين 3 و6 م).';return}
+  if(w)w.textContent=sb!==null?`الارتداد الأمامي = عرض الشارع ÷ 5 = ${nE(Math.max(0,txNumber(S.tx.streetW)/5),2)} م ← يُطبَّق ${nE(sb,2)} م (حد أدنى 3 م) على ضلع الشارع.`:'أدخل عرض الشارع ليُحسب الارتداد الأمامي تلقائيًا (عرض الشارع ÷ 5، بحد أدنى 3 م).'}
 function txCalc(m,geo,tx){
   const A=m.plotArea,G=geo.area;
   const ratio=txNumber(tx.ratio),far=txNumber(tx.far),floors=txNumber(tx.floors),park=txNumber(tx.parkPct);
@@ -1683,24 +1728,41 @@ function txGeometry(m,TE){const same=(a,b)=>Math.abs(a-b)<1e-9,sbMain=TE.filter(
     m2.hasSb=m2.hasSb||m2.extra.some(r=>r.sbs.some(v=>v>0));m2.fullOk=res.valid;m2.bArea=res.valid?res.buildable:0;
     m2.multiB=res.valid?res.parts.map(pg=>pg.map(R=>cleanRing(R.map(([x,y])=>({x,y}))))):null;m2.multi={...m.multi,errors:res.errors}}
   return{m:m2,geo:buildableGeom(m2)}}
+// a street's width: the given value, else the width field of the road layer's road(s) with exactly this name (only when they agree)
+function txStreetW(name,w){if(w>0)return w;if(!name||name==='شطفة'||typeof ROADS==='undefined'||!ROADS.length)return null;
+  const ws=[...new Set(ROADS.filter(rd=>String(rd.properties?.[ROAD_FIELDS.name]??'').trim()===name).map(roadWidthOf).filter(x=>x>0))];return ws.length===1?ws[0]:null}
+// widths of the main ring's streets from the road layer (same matcher as the street setbacks), for edges linked before the
+// width was kept with the edge; cached per parcel and outline
+const TXW={k:'',w:[]};
+function txRingWidths(m){if(!ROADS.length||!ROAD_IDX||!GEO||!CUR_PC)return[];const k=[CUR_PC.stableId,txRingSig(m),ROADS.length,ROAD_FIELDS.name,ROAD_FIELDS.width].join('|');if(TXW.k===k)return TXW.w;
+  let w=[];try{const g=buildGeo(),ring=g.L.map(p=>{const ll=g.F.toLL(p);return[ll.lon,ll.lat]});w=streetsOfRing(ring,CUR_PC).map(s=>s&&s.width>0?{w:s.width,n:s.street}:null)}catch(e){w=[]}
+  TXW.k=k;TXW.w=w;return w}
 function txData(m){const TE=txEdgeList(m),rec=(TXST.pc||null)===(CUR_PC||null)?TXST.rec:null,miss=rec?txMatchRows(TE,rec.rows,TXST.pk):0,warn=[];
   const se=parseInt(S.tx.streetEdge,10),pick=Number.isInteger(se)&&se>=0&&se<m.edges.length?se:-1;
-  TE.forEach(e=>{const v=e.p||{},r=e.row||null,ok=!!(r&&r.accepted&&String(r.name||'').trim()),role=v.role||'side',pName=String(v.name||'').trim();
+  TE.forEach(e=>{const v0=e.p||{},r=e.row||null,ok=!!(r&&r.accepted&&String(r.name||'').trim());
+    // a street found automatically from the street layer gives way to «مزيد»: an edge reviewed there and not approved has no street
+    const decided=!!r&&(r.faceManual||r.nameManual||r.status==='اختيار يدوي'||(r.status==='مطابقة قوية'&&String(r.name||'').trim())),autoOff=v0.nameSrc==='auto'&&decided&&!r.accepted,v=autoOff?{...v0,role:'side',name:'',nameSrc:'',sb:v0.sbSrc==='auto'?null:v0.sb,sbSrc:v0.sbSrc==='auto'?'':v0.sbSrc}:v0;
+    const role=v.role||'side',pName=String(v.name||'').trim();
     e.approved=ok;e.face=e.hole?'hole':ok&&TX_FACE[r.face]&&r.face!=='none'?r.face:role!=='side'?role:r&&r.faceManual&&['front','side','rear'].includes(r.face)?r.face:'side';
     const pStreet=!e.hole&&!!pName&&(role==='front'||v.nameSrc==='streets'||(e.main&&e.i===pick));
     if(ok){e.name=String(r.name).trim();e.nameSrc='st'}else if(pStreet){e.name=pName;e.nameSrc='planner'}else{e.name='';e.nameSrc=''}
     e.street=!e.hole&&(ok||pStreet||e.face==='front'||(e.main&&e.i===pick));
     e.suggest=!ok&&!e.name&&r&&String(r.name||'').trim()?String(r.name).trim():'';
+    e.width=e.street&&e.name?txStreetW(e.name,ok?txNum(r.width):e.nameSrc==='planner'&&v.nameSrc==='auto'?txNum(v.stW):null):null;
     e.nameConflict=ok&&pName&&pName!==e.name&&(role==='front'||v.nameSrc==='streets')?pName:'';
     const rSb=r?txNum(r.sb):null,pSb=txNum(v.sb);
     if(ok&&rSb!==null&&rSb>=0){e.sb=rSb;e.sbSrc='st'}
-    else if(pSb!==null&&pSb>=0&&v.sbSrc){e.sb=pSb;e.sbSrc='planner'}
+    else if(pSb!==null&&pSb>=0&&v.sbSrc&&v.sbSrc!=='auto'){e.sb=pSb;e.sbSrc='planner'}
     // saved in «مزيد» without approval: typed or fixed values, or the user's rule on an edge without a street (a value derived
     // from the width of a street that was not approved is not used)
-    else if(rSb!==null&&rSb>=0&&(['manual','fixed'].includes(r.sbSource)||(r.sbSource==='custom'&&!String(r.name||'').trim()))){e.sb=rSb;e.sbSrc='st-saved'}
-    else if(pSb!==null&&(pSb>0||role==='none')){e.sb=pSb;e.sbSrc='table'}
+    else if(rSb!==null&&rSb>=0&&(['manual','fixed'].includes(r.sbSource)||(r.sbSource==='custom'&&!String(r.name||'').trim()&&!(v.sbSrc==='auto'&&v.nameSrc==='auto')))){e.sb=rSb;e.sbSrc='st-saved'}
+    else if(pSb!==null&&(pSb>0||role==='none'||(pSb===0&&v.sbSrc==='auto'))){e.sb=pSb;e.sbSrc='table'}
     else{e.sb=null;e.sbSrc=''}
     e.sbDiff=e.sb!==null&&pSb!==null&&Math.abs(e.sb-pSb)>1e-6});
+  const needW=e=>e.street&&e.name&&e.name!=='شطفة'&&!e.width;
+  if(TE.some(e=>e.main&&needW(e))){const W=txRingWidths(m);TE.forEach(e=>{const r=e.main&&needW(e)?W[e.i]:null;if(r)e.width=r.w})}
+  // still none and only one street: the form's «عرض الشارع» field
+  {const one=TE.filter(e=>e.street&&e.name&&e.name!=='شطفة'),fw=txNumber(S.tx.streetW);if(one.length===1&&!one[0].width&&fw>0)one[0].width=fw}
   const streets=TE.filter(e=>e.street);
   let primary=pick>=0?TE[pick]:null;
   if(!primary&&streets.length){const own=streets.filter(e=>e.main),pool=own.length?own:streets,fr=pool.filter(e=>e.face==='front');primary=(fr.length?fr:pool).reduce((a,b)=>b.len>a.len?b:a)}
@@ -1789,6 +1851,12 @@ function zrState(m,T){if(!ZR||!m||m.bad)return null;T=T||txData(m);const mm=T.m,
   const st=zrCalc(mm,geo,gState,{sbText:T.sbLine});Object.assign(st,{T,geo,m:mm,src:m,same:mm===m});
   const w=[],R=st.R,Z=st.Z,a=v=>fmtU(Math.round(v*100)/100,2)+' م²';
   if(R.coverageBad)w.push('نسبة التغطية المدخلة غير صالحة (أكبر من 0 وحتى 100٪)؛ عوملت كاشتراط غير محدد.');
+  if(R.upperBad)w.push('نسبة الدور العلوي غير صالحة (أكبر من 0 وحتى 100٪)؛ عوملت كاشتراط غير محدد.');
+  {const zs=S.tx.zSrc||{},us=['ratio','upRatio'].filter(k=>zs[k]==='user'),zg=S.tx.zGis||{};
+    if(us.length)w.push(`${us.map(k=>k==='ratio'?`الأرضي ${S.tx.ratio}٪`:`العلوي ${S.tx.upRatio}٪`).join(' و')} من قواعد المستخدم، وليست اشتراطًا رسميًا موثقًا.`+(zg.ratio&&zs.ratio==='user'?` قيمة GIS (${zg.ratio}٪) لم تُستخدم.`:''));
+    const ud=S.verts.map((v,i)=>v.sbSrc==='auto'&&v.sbDoc===false?i+1:0).filter(Boolean),nw=S.verts.map((v,i)=>v.sbNeed==='width'?i+1:0).filter(Boolean);
+    if(ud.length)w.push(`ارتداد الضلع ${txNos(ud)} = 0 م لأن حقله فارغ في بيانات القطعة (قاعدة المستخدم) — قيمة غير موثقة وليست اشتراطًا رسميًا.`);
+    if(nw.length)w.push(`الضلع ${txNos(nw)} على شارع بلا عرض في طبقة الطرق: الارتداد الأمامي يحتاج عرض الشارع.`)}
   if(R.floorsBad)w.push('عدد الأدوار يجب أن يكون عددًا صحيحًا موجبًا؛ عومل كاشتراط غير محدد.');
   if(R.heightBad)w.push('الارتفاع المسموح غير صالح؛ عومل كاشتراط غير محدد.');
   if(R.farBad)w.push('معامل البناء FAR غير صالح؛ عومل كاشتراط غير محدد.');
@@ -1829,7 +1897,7 @@ function zrRulesRender(st){const sel=$('#zrRuleSel');if(!sel||!ZR)return;const r
   sel.value=opts.some(o=>o.r.id===cur)?cur:S.tx.zRule&&opts.some(o=>o.r.id===S.tx.zRule)?S.tx.zRule:(opts.find(o=>o.m.ok)?.r.id||'')}
 function zrRender(st){const box=$('#zrOut');if(!box||!ZR)return;zrRulesRender(st);
   document.querySelectorAll('[data-zsrc]').forEach(el=>{const k=el.dataset.zsrc,s=(S.tx.zSrc||{})[k],has=String(S.tx[k]??'').trim()!==''||(k==='parcelNo'&&!!S.gis?.no);
-    const t=has?{gis:'GIS',manual:'يدوي',rule:'قاعدة'}[k==='parcelNo'&&!String(S.tx.parcelNo||'').trim()?'gis':s]||'':'';if(el.textContent!==t)el.textContent=t;el.className='zsrc'+(t?' '+(k==='parcelNo'&&!String(S.tx.parcelNo||'').trim()?'gis':s):'')});
+    const t=has?{gis:'GIS',manual:'يدوي',rule:'قاعدة',user:'قاعدة المستخدم'}[k==='parcelNo'&&!String(S.tx.parcelNo||'').trim()?'gis':s]||'':'';if(el.textContent!==t)el.textContent=t;el.className='zsrc'+(t?' '+(k==='parcelNo'&&!String(S.tx.parcelNo||'').trim()?'gis':s):'')});
   const uh=$('#zrUseHint');if(uh)uh.textContent=[!S.tx.zUse?'تصنيف الاستخدام غير محدد: لا تُطابَق أي قاعدة ولا تُعد الاشتراطات معتمدة.':'',
     S.projType==='mosque'?'نوع اللوحة «مسجد» اختيار تصميمي ولا يحدد تصنيف استخدام الأرض النظامي. معاملات برنامج المسجد (مساحة المصلي، موقف لكل عدد من المصلين، المواضئ) قيم تصميمية في البرنامج وليست اشتراطات معتمدة.':''].filter(Boolean).join(' ');
   if(!st){box.innerHTML='<div class="hint">أدخل حدود الأرض أولاً.</div>';box._html='';$('#sumZr').textContent='';return}
@@ -1839,7 +1907,7 @@ function zrRender(st){const box=$('#zrOut');if(!box||!ZR)return;zrRulesRender(st
   const geoNote=Z.G===null?'':Z.gState==='partial'?'مبدئية: بعض الارتدادات غير محددة وحُسبت 0 م':`${f(Z.G/Z.A*100,1)}٪ من الأرض · قصّ هندسي للمضلع`;
   const covNote=Z.covPct===null?'أدخل نسبة التغطية من مصدرها الرسمي':`${fmtU(Z.covPct,Z.covPct%1?1:0)}٪ × ${a(Z.A)}`+(Z.covEx?` + استثناءات موثقة ${a(Z.covEx)}`:'');
   const footNote=Z.footprint!==null?`${t.bind} · ${Z.dist&&Z.dist.ok?'توزيع هندسي محقق':'حد نظري فقط'}${Z.footState==='partial'?' · مبدئي':''}`:Z.footState==='geo-only'?`الحد الهندسي وحده ${a(Z.G)} — ليس مسطحًا نظاميًا`:Z.footState==='geo-unknown'?'الارتدادات غير محددة':'';
-  const grossNote=[Z.byFloors!==null?`المسطح الأرضي × ${R.floors} أدوار = ${a(Z.byFloors)}`:R.floors===null?'عدد الأدوار غير محدد':'',
+  const grossNote=[Z.byFloors!==null?(R.upper!==null?`الأرضي ${a(Z.footprint)} + العلوي ${Z.upper!==null?a(Z.upper):'—'} × ${R.floors-1} = ${a(Z.byFloors)}`:`المسطح الأرضي × ${R.floors} أدوار = ${a(Z.byFloors)}`):R.floors===null?'عدد الأدوار غير محدد':'',
     Z.byFar!==null?`FAR ${fmtU(R.far,2)} × الأرض = ${a(Z.byFar)}`:R.farNA?'FAR غير مطبق':'FAR غير محدد',Z.grossEx?`مستثناة موثقة لا تُحتسب: ${a(Z.grossEx)}`:''].filter(Boolean).join(' · ');
   const nbNote=Z.nb.map(x=>`${x.reason} ${a(x.area)}`).join(' · ');
   const hAuto=txAutoHeight(txNumber(S.tx.floors));
@@ -1848,6 +1916,7 @@ function zrRender(st){const box=$('#zrOut');if(!box||!ZR)return;zrRulesRender(st
     row('2','المساحة الهندسية داخل الارتدادات',Z.G!==null?a(Z.G):t.geo,geoNote,Z.G===null?'miss':Z.gState==='partial'?'prov':'',Z.G===null)+
     row('3','الحد الأقصى لنسبة التغطية',Z.covPct===null?MS:a(Z.covTotal),covNote,Z.covPct===null?'miss':'',Z.covPct===null)+
     row('4','الحد الأعلى للمسطح الأرضي',Z.footprint!==null?a(Z.footprint):Z.footState==='geo-only'?MS:'غير محدد',footNote,Z.footprint===null?'miss':Z.footState==='partial'||!Z.approved?'prov':'',Z.footprint===null)+
+    (Z.upPct!==null||R.upperBad?row('4ب','الحد الأعلى للدور العلوي (لكل دور)',Z.upper!==null?a(Z.upper):Z.upPct===null?MS:'غير محدد',Z.upPct!==null?`${fmtU(Z.upPct,Z.upPct%1?1:0)}٪ × ${a(Z.A)} = ${a(Z.upLimit)} نظريًا`+(Z.upper!==null?(Z.upBinding==='setback'?' · محدود بمنطقة البناء (لا بروز خارجها)':' · داخل منطقة البناء'):'')+((S.tx.zSrc||{}).upRatio==='user'?' · قاعدة المستخدم':''):'',Z.upper===null?'miss':Z.upState==='partial'||!Z.approved?'prov':'',Z.upper===null):'')+
     row('5','إجمالي مسطحات الأدوار المسموحة',Z.gross!==null?a(Z.gross):MS,grossNote,Z.gross===null?'miss':Z.grossState!=='ok'||!Z.approved?'prov':'',Z.gross===null)+
     row('6','المساحات غير القابلة للبناء (أرضي)',Z.nbTotal!==null?a(Z.nbTotal):'غير محدد',nbNote,Z.nbTotal===null?'miss':'',Z.nbTotal===null)+
     row('','الارتفاع المسموح',R.height!==null?f(R.height)+' م':MS,R.height===null&&hAuto!==null?`تقدير النموذج (4.30 + عدد الأدوار = ${f(hAuto)} م) ليس اشتراطًا`:'',R.height===null?'miss':'',R.height===null)+
@@ -1858,7 +1927,7 @@ function zrRender(st){const box=$('#zrOut');if(!box||!ZR)return;zrRulesRender(st
   html+=`<div class="zr-st${Z.approved?' ok':''}"><b>${Z.approved?'معتمد':'غير معتمد'}</b> — ${esc(Z.approved?`المرجع: ${R.ref}${R.refDate?' · '+R.refDate:''}`:Z.reasons.join('، '))}${dist?'<br>'+esc(dist):''}${ZR_AUTO&&ZR_AUTO.pc===CUR_PC?`<br>${esc(`طُبّقت تلقائيًا القاعدة «${ZR_AUTO.name}» المطابقة للموقع والاستخدام.`)}`:''}</div>`;
   if(st.warn.length)html+=`<div class="zr-warn">${st.warn.map(w=>`<div class="warn">${esc(w)}</div>`).join('')}</div>`;
   if(box._html!==html){box.innerHTML=html;box._html=html}
-  $('#sumZr').textContent=Z.footprint!==null?fmtU(Z.footprint)+' م²'+(Z.approved?'':' · غير معتمد'):'غير محدد'}
+  $('#sumZr').textContent=Z.footprint!==null?fmtU(Z.footprint)+' م²'+(Z.approved?'':' · غير معتمد'):'غير محدد';queueParcelResult(st)}
 $('#zrExcAdd').onclick=()=>{S.tx.zExc=Array.isArray(S.tx.zExc)?S.tx.zExc:[];S.tx.zExc.push({kind:'cover',area:'',desc:'',ref:''});zrUnlinkRule('zExc');zrExcRender();persist();schedule()};
 $('#zrExcBody').addEventListener('click',e=>{const b=e.target.closest('[data-zxdel]');if(!b)return;S.tx.zExc.splice(+b.dataset.zxdel,1);zrUnlinkRule('zExc');zrExcRender();persist();schedule()});
 $('#zrApply').onclick=()=>{const id=$('#zrRuleSel').value,rule=ZR.loadRules().find(r=>r.id===id);if(!rule){toast('اختر قاعدة محفوظة أولًا.');return}
@@ -1880,7 +1949,7 @@ function drawTx(m,geo,mini,T){
   // buildable area always agree. Without T it is resolved here from the cached Street Tools record of the current parcel.
   // ZS = zoning requirements with the same setbacks (T): six figures in the results strip and the coverage distribution on the plan
   T=T||txData(m);const ZS=zrState(m,T),Z=ZS?ZS.Z:null;m=T.m;geo=T.geo;const diag={streets:[],setbacks:[],missing:[],lengths:[],number:[],dist:null};
-  const W=1800,H=1210,pr=2,canvas=document.createElement('canvas');canvas.width=W*pr;canvas.height=H*pr;
+  const REF=S.tx.style!=='full',W=1800,H=REF?1000:1210,pr=2,canvas=document.createElement('canvas');canvas.width=W*pr;canvas.height=H*pr;
   const x=canvas.getContext('2d');x.scale(pr,pr);
   const font=(sz,weight=400)=>`${weight} ${sz}px ${FONT}`;
   const width=(s,sz,weight=400)=>{x.font=font(sz,weight);return x.measureText(String(s??'')).width};
@@ -1895,6 +1964,7 @@ function drawTx(m,geo,mini,T){
   const cover=(im,B)=>{const iw=im.naturalWidth,ih=im.naturalHeight,s=Math.max(B.w/iw,B.h/ih),dw=iw*s,dh=ih*s;x.save();x.beginPath();x.rect(B.x,B.y,B.w,B.h);x.clip();x.drawImage(im,B.x+(B.w-dw)/2,B.y+(B.h-dh)/2,dw,dh);x.restore()};
   const C={green:'#1d6b4a',head:'#1b5e3f',dark:'#2b2f2d',muted:'#7d817f',line:'#e4e6e5',border:'#dcdfdd',panel:'#f4f5f4',gold:'#c7a978',
     mapBg:'#e9e9e9',road:'#ffffff',roadEdge:'#d3d3d3',neigh:'#bdbdbd',fill:'#fbbcbc',stroke:'#ee2020',val:'#1f5c3f',inner:'#fde6e6',sbLine:'#d64545'};
+  const AR=v=>REF?String(v??'').replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]).replace(/(?<=[٠-٩]),(?=[٠-٩]{3}(?![٠-٩]))/g,'').replace(/(?<=[٠-٩])[.,](?=[٠-٩])/g,'٫'):v;
   const tx=S.tx,gis=S.gis||{},calc=txCalc(m,geo,tx),area=calc.A;
   // footprint and floor areas from the zoning calculation (coverage exceptions, FAR not applicable) — one source for every output
   if(Z)Object.assign(calc,{footprint:Z.footprint,byFloors:Z.byFloors,byFAR:Z.byFar,gross:Z.gross,coverage:Z.covTotal});
@@ -1915,13 +1985,13 @@ function drawTx(m,geo,mini,T){
   rounded(1005,97,290,38,19,'#ebedec');
   x.beginPath();x.arc(1030,116,16,0,Math.PI*2);x.fillStyle='#cfe1d5';x.fill();x.lineWidth=1.6;x.strokeStyle='#9fc2ab';x.stroke();
   x.beginPath();x.arc(1028.5,114.5,5.5,0,Math.PI*2);x.strokeStyle='#557562';x.lineWidth=2;x.stroke();line(1032.5,118.5,1037,123,'#557562',2.6);
-  const pill=`رقم القطعة: ${parcelNo||'غير محدد'}`;text(pill,1281,116.5,fit(pill,16,225,500),500,C.dark);
+  const pill=AR(`رقم القطعة: ${parcelNo||'غير محدد'}`);text(pill,1281,116.5,fit(pill,16,225,500),500,C.dark);
 
   // location line + section title
   let locTxt=locParts.join(' › ');const planNo=txVal(tx.planNo,gis.planNo);
   if(!locTxt)locTxt=[txVal(tx.municipality,gis.muni),txVal(tx.planName,gis.planName)].filter(Boolean).join(' › ');
   if(planNo&&!locTxt.includes(planNo))locTxt+=(locTxt?' › ':'')+`رقم : ${planNo}`;
-  const locShow=locTxt||'المدينة › المخطط › رقم المخطط';text(locShow,1290,160,fit(locShow,14.5,600),400,locTxt?'#6f7371':'#b0b4b2');
+  const locShow=AR(locTxt)||'المدينة › المخطط › رقم المخطط';text(locShow,1290,160,fit(locShow,14.5,600),400,locTxt?'#6f7371':'#b0b4b2');
   text('تنظيمات واشتراطات البناء',1290,207,17,600,C.green);line(1110,221.5,1297,221.5,C.gold,3.2);
 
   // ten cards, 5 per row (right to left)
@@ -1929,8 +1999,29 @@ function drawTx(m,geo,mini,T){
   const card=(col,row,value,label)=>{const x0=1308-(col+1)*cw-col*gx,y0=row?347:230,h=row?78:108;rounded(x0,y0,cw,h,8,'#fff',C.border,1);
     const ls=label.split('\n'),lc=y0+(row?21:25);ls.forEach((s,i)=>text(s,x0+cw/2,lc+(i-(ls.length-1)/2)*15.5,fit(s,12.5,cw-12),400,C.muted,'center'));
     // a missing value (no requirement / setback) in the same red as the rest of the missing data
+    if(REF){value=AR(value);const vs=value.split('\n'),vz=Math.min(...vs.map(s=>fit(s,vs.length>1?15:19,cw-14,500)));
+      vs.forEach((s,i)=>text(s,x0+cw/2,y0+(row?52:67)+(i-(vs.length-1)/2)*(vz+3),vz,500,C.green,'center',0,/%$/.test(s)?'ltr':'rtl'));return}
     const ltr=/^[\d.,]/.test(value);if(ltr)value=value.replace('م²','م‎²');text(value,x0+cw/2,y0+(row?52:67),fit(value,19,cw-14,500),500,/غير محدد/.test(value)?'#a5442f':C.green,'center',0,ltr?'ltr':'rtl')};
   const sb=T.cards;
+  if(REF){const D='---',ur=S.urules&&S.urules.on?ZR.userCfg(S.urules):null,fr=ur&&T.streets.length?`1/${nE(ur.div,2)} عرض الشارع\nبحد أدنى ${nE(ur.min,2)} م`:null,mv=v=>/غير محدد/.test(v)?D:v;
+    card(0,0,`${format(area,2)}م²`,'مساحة قطعة الأرض');
+    card(1,0,txVal(tx.bType)||D,'نوع المبنى المسموح');
+    card(2,0,calc.validFloors?format(calc.floors,0):D,'الحد الأقصى لعدد\nالأدوار (دور)');
+    card(3,0,calc.height!==null&&calc.height>0&&!calc.heightAuto?format(calc.height,2):D,'الحد الأقصى\nللارتفاع(م)');
+    card(4,0,calc.validRatio?`${format(calc.ratio,1)}%`:D,'نسبة بناء\nالدور الأرضي');
+    // gross floor area: the card stays, its value left as «--» to be filled by hand (the figure stays in the calculation panel
+    // and the detailed look)
+    card(0,1,'--','مساحة البناء\nالإجمالية (م٢)');
+    // FAR with no approved value: the resulting ratio gross ÷ land area, marked as calculated (not a requirement)
+    const gOK=calc.gross!==null&&calc.gross!==undefined&&area>0;
+    card(1,1,calc.validFar&&!tx.farNA?format(calc.far,2):gOK?`${format(calc.gross/area,2)}\n`:D,'معامل مسطح\nالبناء (FAR)');
+    // no rear edge: «لا يوجد» only when two street edges with a name and a setback face opposite sides (a street on both
+    // sides); otherwise the rear stays undetermined
+    const st2=T.edges.filter(e=>!e.hole&&e.street&&e.name&&e.sb!==null&&e.nOut),hasRear=T.edges.some(e=>!e.hole&&e.face==='rear'),
+      thru=st2.some((a,i)=>st2.slice(i+1).some(b=>a.nOut.x*b.nOut.x+a.nOut.y*b.nOut.y<-0.7));
+    card(2,1,fr||mv(sb.front),'الارتداد الأمامي(م)');
+    card(3,1,hasRear?mv(sb.rear):thru?'لا يوجد\n(شارع من الأمام والخلف)':D,'الارتداد الخلفي(م)');
+    card(4,1,mv(sb.side),'الارتداد الجانبي (م)')}else{
   card(0,0,metric(area),'مساحة قطعة الأرض');
   card(1,0,txVal(tx.bType)||'—','نوع المبنى المسموح');
   // regulatory cards: a missing requirement reads «غير محدد»; an automatic height is labelled as the form's estimate, not a requirement
@@ -1941,25 +2032,29 @@ function drawTx(m,geo,mini,T){
   card(1,1,calc.validFar&&!tx.farNA?format(calc.far,2):tx.farNA?'غير مطبق':'غير محدد','معامل مسطح\nالبناء (FAR)');
   card(2,1,sb.front,'الارتداد الأمامي(م)');
   card(3,1,sb.rear,'الارتداد الخلفي(م)');
-  card(4,1,sb.side,'الارتداد الجانبي (م)');
+  card(4,1,sb.side,'الارتداد الجانبي (م)')}
 
   // requirements table
   const TB={x:687,y:437,w:620,h:308};rounded(TB.x,TB.y,TB.w,TB.h,8,'#fff',C.border,1);
+  const TD=S.txDef&&S.txDef.on?S.txDef:{},dv=k=>{const v=String(tx[k]??'').trim();return(k==='archLbl'&&v===defaults().tx.archLbl?'':v)||String(TD[k]??'').trim()||v};
   const rows=[
     ['الارتدادات حسب الأضلاع',T.sbLine||'غير محدد'],
-    ['اشتراطات مواقف السيارات',tx.parkTxt||(calc.validParking?`${format(calc.park,1)}% من مساحة الموقع`:'—')],
-    ['توصيف الأدوار',tx.floorDesc||'—'],
+    ['اشتراطات مواقف السيارات',String(tx.parkTxt??'').trim()||(calc.validParking?`${format(calc.park,1)}% من مساحة الموقع`:dv('parkTxt')||'—')],
+    ['توصيف الأدوار',dv('floorDesc')||'—'],
     txVal(tx.uses)?['الاستخدامات المسموح بها',tx.uses]:null,
     ['الاستخدامات غير المسموح بها',tx.notUses||'—'],
-    ['الاشتراطات الخاصة',tx.special||'—'],
-    [tx.archLbl||'اشتراطات العمارة',tx.arch||'—'],
-    ['النطاق العمراني (داخل / خارج)',tx.urban||'—'],
-    ['حالة القطعة',tx.status||'—'],
-    ['الملاحظات',tx.notes||'-----']].filter(Boolean);
+    ['الاشتراطات الخاصة',dv('special')||'—'],
+    [dv('archLbl')||'اشتراطات العمارة',dv('arch')||'—'],
+    ['النطاق العمراني (داخل / خارج)',dv('urban')||'—'],
+    ['حالة القطعة',dv('status')||'—'],
+    String(tx.photoAt??'').trim()?['تاريخ التصوير',txAtText(tx.photoAt)]:null,
+    ['الملاحظات',dv('notes')||'-----']].filter(Boolean).filter(r=>!REF||r[0]!=='الارتدادات حسب الأضلاع'&&(r[0]!=='الاستخدامات غير المسموح بها'||tx.notUses));
   const rh=(TB.h-16)/rows.length;
   rows.forEach(([lab,v],i)=>{const cy=TB.y+8+rh*(i+.5);if(i)line(TB.x+13,TB.y+8+rh*i,TB.x+TB.w-12,TB.y+8+rh*i,C.line,1);
     text(lab,1290,cy,fit(lab,14,205),400,C.muted);
     let sz=13.5,ls=wrap(v,sz,370);while(ls.length>2&&sz>9.5){sz-=.5;ls=wrap(v,sz,370)}if(ls.length>2)ls=[ls[0],ls[1]+' …'];
+    if(REF)ls=ls.map(AR);const pm=REF&&ls.length===1&&/^(.+?)\s*(\([^()]+\))$/.exec(ls[0]);
+    if(pm){const z=fit(ls[0],sz,370,500),w1=width(pm[1]+' ',z,500),w2=width(pm[2],z,500),X2=1075-w1;text(pm[1],1075,cy,z,500,C.val);text(pm[2],X2,cy,z,500,'#a8894f');line(X2-w2,cy+z*.62,X2,cy+z*.62,'#a8894f',1);return}
     ls.forEach((s,j)=>text(s,1075,cy+(j-(ls.length-1)/2)*(sz+2),fit(s,sz,370,500),500,/غير محدد/.test(s)&&lab==='الارتدادات حسب الأضلاع'?'#a5442f':C.val))});
 
   // maps: real parcel geometry. Street edges, their names and every setback come from T (all rings); no street is guessed
@@ -1994,7 +2089,7 @@ function drawTx(m,geo,mini,T){
       path([A0,B0,{x:B0.x+d.x*roadW,y:B0.y+d.y*roadW},{x:A0.x+d.x*roadW,y:A0.y+d.y*roadW}]);x.fillStyle=C.road;x.fill();
       line(A0.x+d.x*roadW,A0.y+d.y*roadW,B0.x+d.x*roadW,B0.y+d.y*roadW,C.roadEdge,1);
       labels.push({e,a,b,L,t,d})});
-    neigh.forEach(nb=>{const q=nb.ring.map(T2);path(q);x.strokeStyle=C.neigh;x.lineWidth=1;x.stroke();
+    if(!(REF&&plan))neigh.forEach(nb=>{const q=nb.ring.map(T2);path(q);x.strokeStyle=C.neigh;x.lineWidth=1;x.stroke();
       if(nb.no){const p=txPole(q),b=bbox(q);if(Math.min(b.x1-b.x0,b.y1-b.y0)>numSz*1.6)text(nb.no,p.x,p.y,Math.max(10,numSz*.8),400,'#4a4d4c','center')}});
     const zone=calc.envelopeOK&&!T.none&&geo.parts&&geo.parts.length?geo.parts:null;
     const zonePath=()=>{x.beginPath();for(const part of zone)for(const r of part.rings){r.map(T2).forEach((p,i)=>i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y));x.closePath()}};
@@ -2007,7 +2102,7 @@ function drawTx(m,geo,mini,T){
     if(plan){pathAll();x.fillStyle=BLD.band;x.fill('evenodd');
       if(zone){zonePath();x.fillStyle=BLD.fill;x.fill('evenodd');x.lineWidth=1;x.strokeStyle=BLD.fillS;x.stroke()}
       // the verified distribution of the footprint limit: blue hatch + outline over the buildable area (the whole area when setbacks bind)
-      const dz=zone&&Z&&Z.dist&&Z.dist.ok?Z.dist.parts:null;
+      const dz=!REF&&zone&&Z&&Z.dist&&Z.dist.ok?Z.dist.parts:null;
       if(dz){const dPath=()=>{x.beginPath();for(const pg of dz)for(const r of pg){r.map(T2).forEach((p,i)=>i?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y));x.closePath()}};
         x.save();dPath();x.fillStyle='rgba(41,98,160,0.20)';x.fill('evenodd');dPath();x.clip('evenodd');x.strokeStyle='rgba(31,79,138,0.5)';x.lineWidth=1;
         for(let k2=-R.w-R.h;k2<R.w+R.h;k2+=6){x.beginPath();x.moveTo(R.x+k2,R.y);x.lineTo(R.x+k2+R.h,R.y+R.h);x.stroke()}x.restore();
@@ -2018,16 +2113,17 @@ function drawTx(m,geo,mini,T){
       // a partly known setback set gives a provisional area; none known gives no area at all
       const ink=zone?'#ffffff':'#111',l2=T.partial?'المساحة القابلة للبناء (مبدئية)':'المساحة القابلة للبناء',l3=zone?`${nE(geo.area,2)} م‎²`:T.none?'غير محددة':'';
       // where the whole label fits (around a hole or in an L-shape the plain pole may not leave it enough width)
-      const z0=parcelNo?numSz:numSz*.6,needW=Math.max(width(noTxt,z0,700),showArea?Math.max(width(l2,10.5,500),width(l3||'-',13,700)):0)+10,needH=z0+(showArea?10.5+13+8:0)+4;
+      // reference look: the number is already in the pill and on the small map, so the plan shows the area only
+      const noN=REF&&showArea,z0=parcelNo?numSz:numSz*.6,needW=Math.max(noN?0:width(noTxt,z0,700),showArea?Math.max(width(l2,10.5,500),width(l3||'-',13,700)):0)+10,needH=(noN?0:z0)+(showArea?10.5+13+(noN?4:8):0)+4;
       // a label that fits nowhere at full size is scaled down to the best spot (≥ 55 %), never drawn across the boundary
       const spot=txLabelSpot(bigR,needW,needH),c0=spot.p,k0=spot.k,mw=Math.max(30,2*spot.fx-10);
-      const z1=fit(noTxt,z0*k0,mw,700),z2=fit(l2,10.5*k0,mw,500),z3=fit(l3||'-',13*k0,mw,700),gap=4*k0,hh=z1+(showArea?z2+z3+2*gap:0);let yy=c0.y-hh/2;
+      const z1=fit(noTxt,z0*k0,mw,700),z2=fit(l2,10.5*k0,mw,500),z3=fit(l3||'-',13*k0,mw,700),gap=4*k0,hh=(noN?0:z1)+(showArea?z2+z3+(noN?1:2)*gap:0);let yy=c0.y-hh/2;
       const put=(t,z,w,col=ink)=>{if(zone)text(t,c0.x,yy+z/2,z,w,col,'center',0,/^[\d.,]/.test(t)?'ltr':'rtl');else halo(t,c0.x,yy+z/2,z,w,col,0,'rtl',.22);yy+=z+gap};
-      put(noTxt,z1,700);if(showArea){put(l2,z2,500);put(l3,z3,700,zone?ink:'#a5442f')}
-      taken.push(quad(c0.x,c0.y,Math.max(width(noTxt,z1,700),showArea?width(l2,z2,500):0)+6,hh+4,0));diag.number.push({map:mapId,p:c0,holes:bigR.slice(1),lines:showArea?[noTxt,l2,l3]:[noTxt]})}
+      if(!noN)put(noTxt,z1,700);if(showArea){put(l2,z2,500);put(l3,z3,700,zone?ink:'#a5442f')}
+      taken.push(quad(c0.x,c0.y,Math.max(noN?0:width(noTxt,z1,700),showArea?width(l2,z2,500):0)+6,hh+4,0));diag.number.push({map:mapId,p:c0,holes:bigR.slice(1),lines:showArea?(noN?[l2,l3]:[noTxt,l2,l3]):[noTxt]})}
     else{// parcel (every part, holes left open) = setback band colour; buildable area lighter with a dashed setback line
       pathAll();x.fillStyle=C.fill;x.fill('evenodd');
-      if(m.hasSb&&zone){zonePath();x.fillStyle=C.inner;x.fill('evenodd');x.save();x.setLineDash([5,3]);x.lineWidth=1;x.strokeStyle=C.sbLine;x.stroke();x.restore()}
+      if(!REF&&m.hasSb&&zone){zonePath();x.fillStyle=C.inner;x.fill('evenodd');x.save();x.setLineDash([5,3]);x.lineWidth=1;x.strokeStyle=C.sbLine;x.stroke();x.restore()}
       pathAll();x.lineWidth=lw;x.strokeStyle=C.stroke;x.lineJoin='round';x.stroke();
       // parcel number at the pole of inaccessibility (clear of a hole), black with a white halo
       let nsz=parcelNo?numSz:numSz*.6,p0=txPole(pts);
@@ -2035,7 +2131,7 @@ function drawTx(m,geo,mini,T){
       halo(noTxt,p0.x,p0.y,nsz,700,'#111',0,'rtl',.22);
       taken.push(quad(p0.x,p0.y,width(noTxt,nsz,700)+4,nsz+2,0));diag.number.push({map:mapId,p:p0,holes:mainHoles,lines:[noTxt]})}
     // edges dimensioned here: every ring on the plan; the main ring on the small map (as before), which is too small for more
-    const E=T.edges.filter(e=>plan||e.main).map(e=>{const a=T2(e.a),b=T2(e.b),L=Math.hypot(b.x-a.x,b.y-a.y)||1;return{e,a,b,L,t:{x:(b.x-a.x)/L,y:(b.y-a.y)/L},d:sn(e),ang:upright(Math.atan2(b.y-a.y,b.x-a.x))}});
+    const E=T.edges.filter(e=>plan||e.main&&!REF).map(e=>{const a=T2(e.a),b=T2(e.b),L=Math.hypot(b.x-a.x,b.y-a.y)||1;return{e,a,b,L,t:{x:(b.x-a.x)/L,y:(b.y-a.y)/L},d:sn(e),ang:upright(Math.atan2(b.y-a.y,b.x-a.x))}});
     // edge lengths outside the parcel, parallel to the edge (main ring first, largest edges first so they get the best spot);
     // on the small map an extra-ring label that finds no free spot is left out rather than drawn over another
     [...E].sort((p,q)=>(q.e.main-p.e.main)||(q.L-p.L)).forEach(g=>{const s2=`${nE(g.e.len,2)} م`,cands=[];
@@ -2064,7 +2160,7 @@ function drawTx(m,geo,mini,T){
       halo(s2,r.p.x,r.p.y,r.sz,600,DIM.sb,g.ang);diag.setbacks.push({map:mapId,no:g.e.no,sb,text:s2,P0:r.P0,P1,a:g.a,b:g.b,d:g.d,scale:s})});
     // street names last, each inside its own road band and within its own frontage (a corner parcel's names never slide
     // into the crossing street); a street edge without a name reads «غير محدد»
-    labels.forEach(({e,a,b,L,t,d})=>{const nm=e.name,s2=nm||'غير محدد',ang=upright(Math.atan2(t.y,t.x));
+    labels.forEach(({e,a,b,L,t,d})=>{const nm=e.name,s2=nm?(e.width>0&&!/\d\s*م/.test(nm)?`${nm} (عرض ${nE(e.width,2)} م)`:nm):'غير محدد',ang=upright(Math.atan2(t.y,t.x));
       let sz=fit(s2,fs,L*.94,500);if(sz<fs*.6)sz=fit(s2,fs*.6,Math.min(R.w*.8,L+roadW*2),500);
       const w=width(s2,sz,500)+4,half=Math.max(0,(L-w)/(2*L)),cands=[];
       // across the band: just beyond the edge-length label first, then the middle of the band
@@ -2090,7 +2186,7 @@ function drawTx(m,geo,mini,T){
   x.beginPath();x.roundRect(CB.x,CB.y,CB.w,32,[8,8,0,0]);x.fillStyle=C.head;x.fill();
   const px=CB.x+CB.w-17,py=CB.y+16;x.beginPath();x.arc(px,py-2.5,5,Math.PI,0);x.lineTo(px,py+7);x.closePath();x.fillStyle='#fff';x.fill();
   x.beginPath();x.arc(px,py-2.5,1.9,0,Math.PI*2);x.fillStyle=C.head;x.fill();
-  const head=`بيانات ${parcelNo||'غير محدد'}`;text(head,CB.x+CB.w-29,py,fit(head,15.5,200,600),600,'#fff');
+  const head=AR(`بيانات ${parcelNo||'غير محدد'}`);text(head,CB.x+CB.w-29,py,fit(head,15.5,200,600),600,'#fff');
   line(CB.x+16,py-4.5,CB.x+25,py+4.5,'#fff',2);line(CB.x+25,py-4.5,CB.x+16,py+4.5,'#fff',2);
   const meta=[
     ['استخدام المخطط',txVal(tx.planUse,gis.use)],
@@ -2102,7 +2198,10 @@ function drawTx(m,geo,mini,T){
     ['اسم البلدية',txVal(tx.municipality,gis.muni)],
     ['وجود تعارض',txVal(tx.conflict)],
     ['الشوارع المحيطة',T.streetLine]];
-  meta.forEach(([lab,v],i)=>{const cy=183+i*23.6;line(CB.x+12,cy+11.8,CB.x+CB.w-12,cy+11.8,C.line,1);
+  if(REF){const ord=['استخدام القطعة','الاستخدام الفرعي للقطعة','استخدام المخطط','اسم المخطط','رقم المخطط','اسم الحي','اسم البلدية','وجود تعارض'];
+    meta.splice(0,meta.length,...ord.map(l=>{const r=meta.find(q=>q[0]===l);return[l,AR(r[1])]}))}
+  const mh=REF?26:23.6;
+  meta.forEach(([lab,v],i)=>{const cy=183+i*mh;line(CB.x+12,cy+mh/2,CB.x+CB.w-12,cy+mh/2,C.line,1);
     text(lab,CB.x+CB.w-13,cy,12.5,400,C.muted);const streetsRow=lab==='الشوارع المحيطة',mw=CB.w-26-width(lab,12.5)-12;let s2=v||'—',sz=fit(s2,12.5,mw,600);
     // many streets: names without edge numbers, then two lines, rather than tiny text running into the label
     if(streetsRow&&sz<10.5){s2=T.streetNames;sz=fit(s2,12.5,mw,600)}
@@ -2130,7 +2229,7 @@ function drawTx(m,geo,mini,T){
   x.strokeStyle='#cfd3d0';x.lineWidth=1;x.strokeRect(PF.x,PF.y,PF.w,PF.h);
 
   // results strip under the card: the six figures computed independently, approval status, reference and the plan's colour key
-  if(Z){const SB={x:5,y:765,w:1310,h:130},MS=ZR.MISSING,a=v=>`${nE(Math.round(v*100)/100,2)} م‎²`,zt=ZR.texts(Z,(v,d=2)=>nE(v,d),'%'),R0=Z.regs;
+  if(Z&&!REF){const SB={x:5,y:765,w:1310,h:130},MS=ZR.MISSING,a=v=>`${nE(Math.round(v*100)/100,2)} م‎²`,zt=ZR.texts(Z,(v,d=2)=>nE(v,d),'%'),R0=Z.regs;
     rounded(SB.x,SB.y,SB.w,SB.h,6,'#fff','#e0e3e1',1);
     const ttl='الحساب الهندسي والنظامي للمسطحات',tw1=width(ttl,15.5,600);text(ttl,1290,784,15.5,600,C.green);line(1297-tw1,797,1297,797,C.gold,3);
     const st=Z.approved?'حالة الاعتماد: معتمد':'حالة الاعتماد: غير معتمد',sx=1290-tw1-26;text(st,sx,784,12.5,600,Z.approved?C.green:'#a5442f');
@@ -2145,9 +2244,12 @@ function drawTx(m,geo,mini,T){
     const cells=[['إجمالي مساحة الأرض',a(Z.A)],['المساحة داخل الارتدادات',Z.G!==null?a(Z.G):'غير محددة'],['حد نسبة التغطية',Z.covPct===null?MS:a(Z.covTotal)],
       ['الحد الأعلى للمسطح الأرضي',Z.footprint!==null?a(Z.footprint):Z.footState==='geo-only'?MS:'غير محدد'],['إجمالي مسطحات الأدوار',Z.gross!==null?a(Z.gross):MS],
       ['غير القابل للبناء (أرضي)',Z.nbTotal!==null?a(Z.nbTotal):'غير محدد']];
-    const cw2=(SB.w-24-5*8)/6;cells.forEach(([lab,val],i)=>{const x0=SB.x+SB.w-12-(i+1)*cw2-i*8,y0=806,h0=62,key=i===3;rounded(x0,y0,cw2,h0,7,key?'#eef4f0':'#fff',key?'#bcd3c3':C.border,1);
+    // upper floor (when an upper-floor ratio applies): inserted after the ground floor, with its own note
+    if(Z.upPct!==null){cells.splice(4,0,['الحد الأعلى للدور العلوي',Z.upper!==null?a(Z.upper):'غير محدد']);
+      notes.splice(4,0,`${nE(Z.upPct,1)}% × الأرض = ${a(Z.upLimit)}`+(Z.upper!==null&&Z.upBinding==='setback'?' · محدود بمنطقة البناء':'')+((S.tx.zSrc||{}).upRatio==='user'?' · قاعدة المستخدم':''))}
+    const nc=cells.length,cw2=(SB.w-24-(nc-1)*8)/nc;cells.forEach(([lab,val],i)=>{const x0=SB.x+SB.w-12-(i+1)*cw2-i*8,y0=806,h0=62,key=i===3;rounded(x0,y0,cw2,h0,7,key?'#eef4f0':'#fff',key?'#bcd3c3':C.border,1);
       const lb=`${i+1} · ${lab}`;text(lb,x0+cw2-9,y0+13,fit(lb,11.5,cw2-16),400,C.muted);
-      const miss=/غير محدد|الاشتراط/.test(val),ltr=/^[\d.,]/.test(val),prov=!miss&&i>=2&&i<=4&&!Z.approved;
+      const miss=/غير محدد|الاشتراط/.test(val),ltr=/^[\d.,]/.test(val),prov=!miss&&i>=2&&i<=nc-2&&!Z.approved;
       text(val,x0+cw2/2,y0+34,fit(val,17.5,cw2-14,600),600,miss?'#a5442f':prov?'#9a6a12':C.green,'center',0,ltr?'ltr':'rtl');
       text(notes[i],x0+cw2/2,y0+52,fit(notes[i],10,cw2-12),400,'#7d817f','center')});
     // footer: reference and use (right), colour key of the plan (left)
@@ -2161,9 +2263,9 @@ function drawTx(m,geo,mini,T){
   x.restore();
 
   const note=(Z&&Z.approved?'لوحة استرشادية؛ الاشتراطات النظامية من المرجع المدخل وحالته «معتمد» كما أدخلها المستخدم.':'لوحة استرشادية غير معتمدة؛ الضوابط النظامية من مدخلات المستخدم.')+(calc.envelopeOK?' الأرقام محسوبة هندسيًا من حدود القطعة.':' تحذير: تعذّر حساب هندسة الارتدادات بشكل موثوق؛ راجعها.');
-  text(note,W-ox-6,H-11,11.5,400,calc.envelopeOK?'#8a8f8c':'#aa452e');
-  // missing data is said on the sheet itself (and so in PNG / PDF), never filled with a guess
-  if(T.short){const wt=`تنبيه: بيانات ناقصة — ${T.short}. أكملها في «مزيد» أو في جدول الارتدادات.`;text(wt,W-ox-6,H-27,fit(wt,11.5,W-2*ox-12,600),600,'#aa452e')}
+  if(!REF)text(note,W-ox-6,H-11,11.5,400,calc.envelopeOK?'#8a8f8c':'#aa452e');
+  // missing data is said on the sheet itself (and so in PNG / PDF), never filled with a guess; the reference look says it in the preview
+  if(T.short&&!REF){const wt=`تنبيه: بيانات ناقصة — ${T.short}. أكملها في «مزيد» أو في جدول الارتدادات.`;text(wt,W-ox-6,H-27,fit(wt,11.5,W-2*ox-12,600),600,'#aa452e')}
   return {cv:canvas,W,H,pr,calc,tx:T,diag,zoning:ZS};
 }
 
@@ -2199,9 +2301,16 @@ function readTxSlot(k,f){if(!f||!f.type.startsWith('image/')){toast('اختر م
 function loadTxPhoto(dataUrl,fresh){const im=new Image();im.onload=()=>{TXIMG=im;TXDATA=dataUrl;$('#txPhotoInfo').textContent=`الصورة جاهزة (${im.naturalWidth}×${im.naturalHeight})`;
   try{localStorage.setItem(STORE_TXP,dataUrl)}catch(e){if(fresh)toast('الصورة كبيرة على الحفظ في المتصفح؛ ستبقى حتى تغلق الصفحة.')}};
   im.onerror=()=>toast('تعذّر قراءة الصورة. جرّب PNG أو JPG.');im.src=dataUrl}
-function clearTxPhoto(){TXIMG=null;TXDATA=null;$('#txPhotoInfo').textContent='لا توجد صورة بعد.';try{localStorage.removeItem(STORE_TXP)}catch(e){}}
+function clearTxPhoto(){TXIMG=null;TXDATA=null;S.tx.photoAt='';syncInputs();persist();$('#txPhotoInfo').textContent='لا توجد صورة بعد.';try{localStorage.removeItem(STORE_TXP)}catch(e){}}
 // phone photos are downscaled (max 1600 px, JPEG) so they fit in browser storage and the project file
-function readTxPhoto(f){if(!f||!f.type.startsWith('image/')){toast('اختر ملف صورة (PNG أو JPG).');return}const r=new FileReader();
+// «2026-09-21 07:02:37» → «2026/09/21» (date only on the form); anything else is shown as typed
+function txAtText(v){const m=/^(\d{4})-(\d\d)-(\d\d)(?:\s+(\d\d):(\d\d)(?::(\d\d))?)?$/.exec(String(v||'').trim());if(!m)return String(v||'').trim();
+  return`${m[1]}/${m[2]}/${m[3]}`}
+function txPhotoAt(name){const m=/(20\d\d)[-_.]?(\d\d)[-_.]?(\d\d)[ _T-]+(\d\d)[-_.:]?(\d\d)(?:[-_.:]?(\d\d))?/.exec(String(name||''));
+  if(!m||+m[2]<1||+m[2]>12||+m[3]<1||+m[3]>31||+m[4]>23||+m[5]>59||(m[6]&&+m[6]>59))return'';return`${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}${m[6]?':'+m[6]:''}`}
+function readTxPhoto(f){if(!f||!f.type.startsWith('image/')){toast('اختر ملف صورة (PNG أو JPG).');return}
+  S.tx.photoAt=txPhotoAt(f.name);syncInputs();persist();if(!S.tx.photoAt)toast('لم يُعثر على تاريخ ووقت في اسم الصورة؛ اكتبهما في خانة «تاريخ ووقت التصوير» إن أردت.');
+  const r=new FileReader();
   r.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)),c2=document.createElement('canvas');
     c2.width=Math.round(im.naturalWidth*s);c2.height=Math.round(im.naturalHeight*s);c2.getContext('2d').drawImage(im,0,0,c2.width,c2.height);loadTxPhoto(c2.toDataURL('image/jpeg',0.88),true)};
     im.onerror=()=>toast('تعذّر قراءة الصورة. جرّب PNG أو JPG.');im.src=r.result};r.readAsDataURL(f)}
@@ -2291,7 +2400,8 @@ function initMap(){
   sat.on('tileerror',()=>{mapErrs++;if(mapErrs>4&&!mapOk)mapMsg('الصور الفضائية لا تعمل داخل صفحة Claude. نزّل البرنامج كملف HTML وافتحه في Chrome أو Edge على جهازك، وستعمل الخريطة كاملة.')});
   sat.on('tileload',()=>{mapOk++;if(mapOk===1)mapMsg('')});
   map.on('click',e=>{if(drawMode)addPt(e.latlng)});
-  showCurrentPlot(true);updDraw()}
+  map.createPane('gisPane').style.zIndex=450;
+  showCurrentPlot(true);updDraw();drawGisLayers(!plotLatLngs())}
 function plotLatLngs(){if(!M||M.bad)return null;return M.P.map(p=>{const ll=toLL(M.geo,p);return[ll.lat,ll.lon]})}
 function showCurrentPlot(fit){if(!map)return;if(curPoly){map.removeLayer(curPoly);curPoly=null}const lls=plotLatLngs();
   if(!lls){map.setView([+S.refLat||24.7,+S.refLon||46.7],15);return}
@@ -2303,7 +2413,10 @@ function showCurrentPlot(fit){if(!map)return;if(curPoly){map.removeLayer(curPoly
     lay.parts.forEach(p=>L.polygon(p.poly.map(llOf),{color:COL[p.k].s,weight:1,fillColor:COL[p.k].f,fillOpacity:0.95,interactive:false,className:'lay-'+p.k}).addTo(curPoly))}
   (M.extraOrder||[]).forEach(r=>{r.E.forEach((e,i)=>{const ll=toLL(M.geo,mul(add(e.a,e.b),0.5));L.marker([ll.lat,ll.lon],{interactive:false,icon:L.divIcon({className:'mapen'+(r.ring?' hole':' part'),html:String(r.start+i),iconSize:[24,22]})}).addTo(curPoly)})});
   M.edges.forEach((e,i)=>{const ll=toLL(M.geo,mul(add(e.a,e.b),0.5));if(i===HL){const a=toLL(M.geo,e.a),b=toLL(M.geo,e.b);L.polyline([[a.lat,a.lon],[b.lat,b.lon]],{color:'#ff8a00',weight:6,interactive:false}).addTo(curPoly)}
-    L.marker([ll.lat,ll.lon],{interactive:false,icon:L.divIcon({className:'mapen',html:String(i+1),iconSize:[22,22]})}).addTo(curPoly)});
+    L.marker([ll.lat,ll.lon],{interactive:false,icon:L.divIcon({className:'mapen',html:String(i+1),iconSize:[22,22]})}).addTo(curPoly);
+    // the setback of the edge in metres, inside the parcel next to the edge
+    if(e.sb>0||S.verts[i]?.sbSrc==='auto'){const q=toLL(M.geo,sub(mul(add(e.a,e.b),0.5),mul(e.nOut,e.sb+Math.min(4,e.len/6))));
+      L.marker([q.lat,q.lon],{interactive:false,icon:L.divIcon({className:'mapsb',html:`${nE(e.sb,2)} م`,iconSize:[56,16]})}).addTo(curPoly)}});
   if(fit)map.fitBounds(M.allP?L.latLngBounds(M.allP.map(p=>{const ll=toLL(M.geo,p);return[ll.lat,ll.lon]})):outline.getBounds(),{padding:[60,60],maxZoom:19})}
 function addPt(ll){const i=drawPts.length;drawPts.push(ll);const mk=L.marker(ll,{draggable:true,icon:L.divIcon({className:'vx',iconSize:[14,14]})}).addTo(map);
   mk.on('drag',e=>{drawPts[i]=e.target.getLatLng();updDraw()});drawMarkers.push(mk);updDraw()}
@@ -2324,7 +2437,7 @@ $('#mUse').onclick=()=>{const d=drawnLocal();if(!d||d.pts.length<3){toast('ار�
   if(S.img.src!=='upload')S.img.src='esri';S.img.show=true;S.sheet.panX=0;S.sheet.panY=0;S.sheet.scale='auto';
   drawMode=false;clearDraw();structural();syncInputs();M=compute();
   const e=M.edges.reduce((a,b)=>b.len>a.len?b:a);let ang=-Math.atan2(e.b.y-e.a.y,e.b.x-e.a.x)*R2D;ang=((ang+90)%180+180)%180-90;S.sheet.vr=Math.round(ang);syncInputs();persist();
-  setView('sheet');toast('اعتُمدت الأرض. اضبط الارتدادات من جدول النقاط.')};
+  setView('sheet');if(!autoStreetSetbacks(false))toast('اعتُمدت الأرض. اضبط الارتدادات من جدول النقاط.')};
 async function mapSearch(){const q=$('#mSearch').value.trim();if(!q||!map)return;
   let m2=q.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||q.match(/[?&](?:q|query|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/)||q.match(/^\s*(-?\d+(?:\.\d+)?)\s*[,،\s]\s*(-?\d+(?:\.\d+)?)\s*$/);
   if(m2){map.setView([+m2[1],+m2[2]],18);return}
@@ -2343,12 +2456,12 @@ function parseSHP(buf){const dv=new DataView(buf),out=[];let o=100;
       const pb=rs+44+4*np,pts=[];for(let i=0;i<n;i++)pts.push({x:dv.getFloat64(pb+16*i,true),y:dv.getFloat64(pb+16*i+8,true)});
       out.push(parts.map((s0,i)=>pts.slice(s0,i+1<np?parts[i+1]:n)))}else out.push(null);o=rs+len}return out}
 function parseDBF(buf,cpg){const u=new Uint8Array(buf),dv=new DataView(buf),n=dv.getUint32(4,true),hl=dv.getUint16(8,true),rl=dv.getUint16(10,true),fields=[];
-  for(let o=32;o<hl-1&&u[o]!==0x0D;o+=32){let nm='';for(let k=0;k<11&&u[o+k];k++)nm+=String.fromCharCode(u[o+k]);fields.push({name:nm,len:u[o+16]})}
+  for(let o=32;o<hl-1&&u[o]!==0x0D;o+=32){let nm='';for(let k=0;k<11&&u[o+k];k++)nm+=String.fromCharCode(u[o+k]);fields.push({name:nm,len:u[o+16],type:String.fromCharCode(u[o+11])})}
   let dec;const enc=(cpg||'').trim().toLowerCase();
   const tryDec=label=>{try{return new TextDecoder(label,{fatal:true})}catch(e){return null}};
   const dU=tryDec('utf-8'),d1256=tryDec(enc.includes('1256')||enc.includes('arabic')?'windows-1256':'windows-1256')||new TextDecoder();
   const rows=[];for(let r=0;r<n;r++){let o=hl+r*rl+1;const row={};for(const f of fields){const b=u.subarray(o,o+f.len);let v;
-      if(enc.includes('1256'))v=d1256.decode(b);else{try{v=dU?dU.decode(b):d1256.decode(b)}catch(e){v=d1256.decode(b)}}row[f.name]=v.replace(/\0/g,'').trim();o+=f.len}rows.push(row)}return rows}
+      if(enc.includes('1256'))v=d1256.decode(b);else{try{v=dU?dU.decode(b):d1256.decode(b)}catch(e){v=d1256.decode(b)}}v=v.replace(/\0/g,'').trim();if('NF'.includes(f.type)&&/^[-+]?\d*\.?\d+[eE][-+]?\d+$/.test(v)&&Number.isFinite(+v))v=String(+(+v).toPrecision(12));row[f.name]=v;o+=f.len}rows.push(row)}return rows}
 function prjInfo(t){if(!t)return null;const datum=/WGS[_ ]?(19)?84|WGS_1984/i.test(t)?'WGS84':((t.match(/DATUM\["([^"]+)"/i)||[])[1]||'');
   if(!/PROJCS/i.test(t))return{kind:'geo',datum};
   let z=t.match(/UTM[_ ]?zone[_ ]?(\d{1,2})\s*N/i)||t.match(/UTM[^"]*?(\d{1,2})N/i);
@@ -2407,7 +2520,7 @@ async function persistMainParcelLayer(file){let unsupported=0;
   try{await ParcelStore.putLayer('parcels',layerId,PARCELS,{source:file?.name||'',count:PARCELS.length,origin:'main'});localStorage.setItem(PARCEL_LAYER_KEY,layerId);return''}
   catch(error){MAIN_PARCEL_LAYER_ID='';return` · تعذر حفظ الطبقة الدائمة: ${error.message}`}}
 // Parcel geometry errors (unknown CRS) are reported to the user instead of failing silently.
-function tryApplyParcel(pc){try{applyParcel(pc);return true}catch(error){toast(error.message||String(error));return false}}
+function tryApplyParcel(pc){try{applyParcel(pc);edgeDiagShow(-1);return true}catch(error){toast(error.message||String(error));return false}}
 async function restoreMainParcelLayer(){if(!window.ParcelStore)return;const layerId=localStorage.getItem(PARCEL_LAYER_KEY);if(!layerId)return;
   let pending=null;try{const token=new URLSearchParams(location.search).get('streetResult'),saved=JSON.parse(sessionStorage.getItem('gis_planner_street_output_v1')||'null');if(token&&saved?.token===token)pending=saved.data}catch(e){}
   const activeLayer=pending?.layerId||layerId;
@@ -2416,13 +2529,14 @@ async function restoreMainParcelLayer(){if(!window.ParcelStore)return;const laye
     PARCELS.forEach((p,i)=>{if(!p.id)p.id=String(p.no||p.label||`قطعة ${i+1}`)});
     $('#parcelSel').innerHTML=PARCELS.map((p,i)=>`<option value="${esc(p.stableId)}">${esc(p.label||`قطعة ${i+1}`)}</option>`).join('');$('#parcelPick').hidden=PARCELS.length<2;gisRefreshNos();
     const active=await ParcelStore.getRecord('active-parcel'),target=pending?.layerId===activeLayer?PARCELS.find(p=>p.stableId===pending.parcelId||p.parcelSignature===pending.parcelSignature):null;
-    const fallback=active?.layerId===activeLayer?PARCELS.find(p=>p.stableId===active.parcelId||p.parcelSignature===active.parcelSignature):null;if(!tryApplyParcel(target||fallback||PARCELS[0]))return;await restoreMainParcelSnapshot(CUR_PC);$('#parcelSel').value=CUR_PC?.stableId||PARCELS[0].stableId;zrLoadStreet();
+    const fallback=active?.layerId===activeLayer?PARCELS.find(p=>p.stableId===active.parcelId||p.parcelSignature===active.parcelSignature):null;if(!tryApplyParcel(target||fallback||PARCELS[0]))return;await restoreMainParcelSnapshot(CUR_PC);autoStreetSetbacks(false);drawGisLayers(false);$('#parcelSel').value=CUR_PC?.stableId||PARCELS[0].stableId;zrLoadStreet();
     $('#importInfo').textContent=`تم استرجاع ${PARCELS.length} قطعة من التخزين المحلي.`}
   catch(error){$('#importInfo').textContent=`تعذر استرجاع طبقة القطع: ${error.message}`}}
-async function importFile(f){if(CUR_PC)await saveMainParcelSnapshot(CUR_PC);const name=f.name.toLowerCase();let list=[],info='';
+async function importFile(f){if(CUR_PC)await saveMainParcelSnapshot(CUR_PC);const name=f.name.toLowerCase();let list=[],info='',roadNote='';
   try{
     if(name.endsWith('.zip')||name.endsWith('.kmz')){if(!window.JSZip)throw new Error('مكتبة فك الضغط لم تُحمَّل.');const z=await JSZip.loadAsync(f),files=Object.values(z.files).filter(x=>!x.dir&&!/__MACOSX/.test(x.name));
-      const kml=files.find(x=>/\.kml$/i.test(x.name));const shp=files.find(x=>/\.shp$/i.test(x.name));
+      const kml=files.find(x=>/\.kml$/i.test(x.name));let shp=null;
+      for(const s0 of files.filter(x=>/\.shp$/i.test(x.name))){const t=shpType(await s0.async('arraybuffer'));if([3,13,23].includes(t))roadNote+=await importRoadShp(files,s0,f);else if(!shp&&[5,15,25].includes(t))shp=s0}
       if(shp){const base=shp.name.replace(/\.shp$/i,''),get=ext=>files.find(x=>x.name.toLowerCase()===(base+ext).toLowerCase());
         const geoms=parseSHP(await shp.async('arraybuffer'));const dbfF=get('.dbf'),prjF=get('.prj'),cpgF=get('.cpg');
         const rows=dbfF?parseDBF(await dbfF.async('arraybuffer'),cpgF?await cpgF.async('string'):''):[];const prj=prjF?prjInfo(await prjF.async('string')):null;
@@ -2431,15 +2545,21 @@ async function importFile(f){if(CUR_PC)await saveMainParcelSnapshot(CUR_PC);cons
         info=prj?(prj.kind==='utm'?`الإسقاط: UTM نطاق ${prj.zone} شمال`:prj.kind==='geo'?'الإسقاط: إحداثيات جغرافية (درجات)':'إسقاط غير معروف'):'لا يوجد ملف PRJ';
         if(prj&&prj.datum&&prj.datum!=='WGS84')info+=` · المرجع ${prj.datum}: قد تظهر إزاحة عن الصورة الفضائية (حتى ٢٠٠م مع عين العبد).`}
       else if(kml){list=parseKML(await kml.async('string'));info='ملف KML'}
+      else if(roadNote){roadsOnlyDone(f,roadNote);return}
       else throw new Error('لم أجد ملف .shp أو .kml داخل الـ ZIP.')}
     else if(name.endsWith('.kml')){list=parseKML(await f.text());info='ملف KML'}
-    else{const j=JSON.parse(await f.text());const feats=j.type==='FeatureCollection'?j.features:j.type==='Feature'?[j]:[{type:'Feature',geometry:j,properties:{}}];
+    else{const j=JSON.parse(await f.text());let feats=j.type==='FeatureCollection'?j.features:j.type==='Feature'?[j]:[{type:'Feature',geometry:j,properties:{}}];
+      const lines=feats.filter(ft=>/LineString/.test(ft?.geometry?.type||''));feats=feats.filter(ft=>!lines.includes(ft));
+      if(lines.length)roadNote+=await setRoadLayer(lines.flatMap(ft=>(ft.geometry.type==='LineString'?[ft.geometry.coordinates]:ft.geometry.coordinates).filter(c=>c?.length>=2).map((c,k)=>({type:'Feature',properties:{...(ft.properties||{}),__part:k},geometry:{type:'LineString',coordinates:c.map(p=>[+p[0],+p[1]])}}))),f.name);
+      if(!feats.length&&roadNote){roadsOnlyDone(f,roadNote);return}
       feats.forEach((ft,i)=>{const rings=ringsFromGeo(ft.geometry),ring=largest(rings.map(poly=>poly[0].map(c2=>({x:+c2[0],y:+c2[1]}))));if(ring)list.push({label:pickLabel(ft.properties,list.length),ring,geometry:ft.geometry,sourceId:ft.id||ft.properties?.OBJECTID||ft.properties?.PARCEL_ID||'',prj:null,attrs:ft.properties||{}})});
       info='ملف GeoJSON'}
   }catch(e){toast('تعذّر قراءة الملف: '+(e.message||e));return}
   if(!list.length){toast('لم أجد أي قطعة (مضلع) في الملف.');return}
-  PARCELS=list;const saveNote=await persistMainParcelLayer(f);$('#parcelSel').innerHTML=PARCELS.map((p,i)=>`<option value="${esc(p.stableId)}">${esc(p.label)}</option>`).join('');$('#parcelPick').hidden=PARCELS.length<2;
-  $('#importInfo').textContent=`${f.name}: ${PARCELS.length} قطعة. ${info}${saveNote}`;if(tryApplyParcel(PARCELS[0])){$('#parcelSel').value=PARCELS[0].stableId;zrLoadStreet()}}
+  PARCELS=list;PLAN_RES=new Map();$('#planInfo').textContent='';const saveNote=await persistMainParcelLayer(f);$('#parcelSel').innerHTML=PARCELS.map((p,i)=>`<option value="${esc(p.stableId)}">${esc(p.label)}</option>`).join('');$('#parcelPick').hidden=PARCELS.length<2;
+  $('#importInfo').textContent=`${f.name}: ${PARCELS.length} قطعة. ${info}${saveNote}${roadNote}`;
+  if(tryApplyParcel(PARCELS[0])){$('#parcelSel').value=PARCELS[0].stableId;zrLoadStreet();autoStreetSetbacks(false)}
+  setView('map');drawGisLayers(true);if(PARCELS.length>1)toast('اضغط على أي قطعة في الخريطة لاختيارها وحساب ارتداداتها.')}
 function parseKML(txt){const doc=new DOMParser().parseFromString(txt,'application/xml'),out=[];
   [...doc.getElementsByTagName('Placemark')].forEach(pm=>{const nm=(pm.getElementsByTagName('name')[0]||{}).textContent||'';
     const polys=[...pm.getElementsByTagName('Polygon')];const rings=polys.map(pg=>{const ob=pg.getElementsByTagName('outerBoundaryIs')[0]||pg;const co=(ob.getElementsByTagName('coordinates')[0]||{}).textContent||'';
@@ -2447,25 +2567,25 @@ function parseKML(txt){const doc=new DOMParser().parseFromString(txt,'applicatio
     const ring=largest(rings);if(ring)out.push({label:'قطعة '+(out.length+1)+(nm?' — '+nm.trim().slice(0,40):''),ring,prj:{kind:'geo'},attrs:{name:nm.trim()}})});return out}
 function txFromParcel(row) {
   const aliases = {
-    parcelNo:['رقم القطعة','ParcelNumber','ParcelNo'],
+    parcelNo:['رقم القطعة','ParcelNumber','ParcelNo','PARCEL_NUM'],
     planNo:['رقم المخطط','PlanNumber'], planName:['اسم المخطط'],
     district:['اسم الحي','District Arabic Name','DIS_ArabicName','الحي'],
     municipality:['اسم البلدية','Municipality Arabic Name','MUN_ArabicName','البلدية'],
     street:['اسم الشارع','Street Arabic Name','street_name','RoadcenterlineAName'],
     streetW:['عرض الشارع','عرض الشارع (م)','StreetWidth'],
     planUse:['استخدام المخطط'], subUse:['الاستخدام الفرعي للقطعة'],
-    parcelUse:['استخدام القطعة','اسم الطبقة بالعربية','LandUse'],
+    parcelUse:['استخدام القطعة','اسم الطبقة بالعربية','LandUse','LANDUSE_DE','LANDUSE_DESC','LAYER_DESC'],
     conflict:['وجود تعارض'], bType:['نوع المبنى المسموح'],
-    floors:['أقصى عدد أدوار','الحد الأقصى لعدد الأدوار','عدد الأدوار','Floors','MAX_FLOORS','NO_FLOORS'],
+    floors:['أقصى عدد أدوار','الحد الأقصى لعدد الأدوار','عدد الأدوار','Floors','MAX_FLOORS','NO_FLOORS','FLOORSNO','FLOORS_NO'],
     height:['أقصى ارتفاع م','الحد الأقصى للارتفاع','الارتفاع المسموح','MaxHeight','MAX_HEIGHT'],
-    ratio:['نسبة البناء','نسبة بناء الدور الأرضي','نسبة التغطية','نسبة التغطية البنائية','Coverage','BuildingRatio','BLD_RATIO'], far:['معامل البناء FAR','FAR','معامل البناء'],
+    upRatio:['نسبة الدور العلوي','نسبة البناء للدور العلوي','UPPER_RATIO','UP_RATIO'],ratio:['نسبة البناء','نسبة بناء الدور الأرضي','نسبة التغطية','نسبة التغطية البنائية','Coverage','BuildingRatio','BLD_RATIO','BUILD_RATI','BUILD_RATIO'], far:['معامل البناء FAR','FAR','معامل البناء'],
     floorDesc:['توصيف الأدوار'], parkTxt:['اشتراطات مواقف السيارات','متطلبات المواقف','Parking'],
     uses:['الاستخدامات المسموح بها'], notUses:['الاستخدامات غير المسموح بها'],
     special:['الاشتراطات الخاصة','القيود الإضافية'], arch:['اشتراطات العمارة'],
-    urban:['النطاق العمراني'], status:['حالة القطعة'], notes:['الملاحظات','ملاحظات'],
+    urban:['النطاق العمراني'], status:['حالة القطعة','PARCEL_STATUS'], notes:['الملاحظات','ملاحظات'],
     // zoning requirements (الاشتراطات التنظيمية): location, land use, official reference and its approval status
     city:['المدينة','City','CityName','City Arabic Name'], amana:['الأمانة','الامانة','Amana','Amanah','Amana Arabic Name'],
-    zUseTxt:['تصنيف الاستخدام','تصنيف استخدام الأرض','استخدام الأرض','LAND_USE','LandUseClass','UseClass'],
+    zUseTxt:['تصنيف الاستخدام','تصنيف استخدام الأرض','استخدام الأرض','LAND_USE','LandUseClass','UseClass','LANDUSE_DE','LANDUSE_DESC'],
     parkPct:['نسبة المواقف','ParkingPct'],
     zRef:['مرجع الاشتراط','المرجع الرسمي','مرجع الاشتراطات','RegulationRef','REG_REF'], zRefDate:['تاريخ الاشتراط','تاريخ المرجع','RegulationDate','REG_DATE'],
     zStatus:['حالة الاعتماد','حالة الاشتراط','ApprovalStatus','REG_STATUS']
@@ -2478,12 +2598,17 @@ function txFromParcel(row) {
     S.tx[name] = value == null ? '' : String(value).trim();
   }
   for (const name of ['loc','adv','cap','qr','streetEdge']) S.tx[name] = '';
+  // parcel layer of the municipality (FLOORSNO, LANDUSE_DE, HAS_BUILDI, CASE_DESCR …): status from the «built» flags, notes from
+  // the case description and its proposed action; a field that is empty or <Null> leaves the form's own default
+  const fv = (...ns) => { for (const n of ns) { const v = fields.get(key(n)); if (v != null && String(v).trim() && !/^<null>$/i.test(String(v).trim())) return String(v).trim() } return '' };
+  if (!S.tx.status) { const b = fv('HAS_BUILDI','HAS_BUILDING','IS_BUILT'); S.tx.status = /^(نعم|1|yes|true|y)$/i.test(b) ? 'مبنية' : /^(لا|0|no|false|n)$/i.test(b) ? 'غير مبنية' : '' }
+  if (!S.tx.notes) S.tx.notes = [fv('CASE_DESCR','CASE_DESC'), fv('PRPOPSED_S','PRPPOSED_S','PROPOSED_S')].filter(Boolean).join(' — ');
   // land-use class: from a land-use field; the parcel-use field is used only when its text names a known use
   const useCls=ZR?ZR.classifyUse(S.tx.zUseTxt):'',alt=ZR&&!S.tx.zUseTxt?ZR.classifyUse(S.tx.parcelUse):'';
   S.tx.zUse=useCls||(alt&&alt!=='other'?alt:'');if(!S.tx.zUseTxt&&S.tx.zUse)S.tx.zUseTxt=S.tx.parcelUse;
   S.tx.zStatus=ZR?ZR.classifyStatus(S.tx.zStatus):'';S.tx.farNA=false;S.tx.zExc=[];S.tx.zRule='';
   S.tx.zSrc=Object.fromEntries(Object.keys(defaults().tx.zSrc).map(k=>[k,k!=='farNA'&&S.tx[k]?'gis':'']));
-  zrAutoApply(0);
+  zrAutoApply(0);S.tx.zGis={};userApply();
   clearTxPhoto();
 }
 function applyParcel(pc){CUR_PC=pc;gisRefreshNos();txFromParcel(pc.attrs);let kind=pc.prj?.kind,zone=pc.prj?.zone;const r=pc.ring,looksGeo=r.every(p=>Math.abs(p.x)<=180&&Math.abs(p.y)<=90);
@@ -2505,7 +2630,7 @@ function applyParcel(pc){CUR_PC=pc;gisRefreshNos();txFromParcel(pc.attrs);let ki
 // A's edges onto B or save B's defaults as A's snapshot.
 let ACT_Q=Promise.resolve(),ACT_TARGET=null;
 function activateParcel(pc){ACT_TARGET=pc;const run=ACT_Q.then(async()=>{if(!pc||ACT_TARGET!==pc)return;
-    if(CUR_PC&&CUR_PC!==pc)await saveMainParcelSnapshot(CUR_PC);if(ACT_TARGET!==pc||!tryApplyParcel(pc))return;await restoreMainParcelSnapshot(pc);if(pc.stableId&&CUR_PC===pc){$('#parcelSel').value=pc.stableId;zrLoadStreet()}});
+    if(CUR_PC&&CUR_PC!==pc)await saveMainParcelSnapshot(CUR_PC);if(ACT_TARGET!==pc||!tryApplyParcel(pc))return;await restoreMainParcelSnapshot(pc);if(CUR_PC===pc)autoStreetSetbacks(false);if(pc.stableId&&CUR_PC===pc){$('#parcelSel').value=pc.stableId;zrLoadStreet()}});
   ACT_Q=run.catch(()=>{});return run}
 function dedupe(pts){const out=[];pts.forEach(p=>{const q=out.at(-1);if(!q||Math.hypot(p.x-q.x,p.y-q.y)>0.02)out.push(p)});
   if(out.length>3&&Math.hypot(out[0].x-out.at(-1).x,out[0].y-out.at(-1).y)<0.02)out.pop();
@@ -2518,19 +2643,350 @@ $('#parcelFile').onchange=e=>{const f=e.target.files[0];if(f)importFile(f);e.tar
 pdrop.addEventListener('dragover',e=>{e.preventDefault();pdrop.classList.add('on')});pdrop.addEventListener('dragleave',()=>pdrop.classList.remove('on'));
 pdrop.addEventListener('drop',e=>{e.preventDefault();pdrop.classList.remove('on');const f=e.dataTransfer.files[0];if(f)importFile(f)});
 $('#pickImg').onclick=()=>{$('#imgFile').click()};
-$('#demoBtn').onclick=()=>{const d=defaults();Object.assign(S,{coordMode:d.coordMode,zone:d.zone,refLat:d.refLat,refLon:d.refLon,verts:d.verts});S.sheet.vr=d.sheet.vr;S.sheet.panX=0;S.sheet.panY=0;
-  PARCELS=[];CUR_PC=null;S.geom=null;MAIN_PARCEL_LAYER_ID='';try{localStorage.removeItem(PARCEL_LAYER_KEY)}catch(e){}S.gis=defaults().gis;$('#parcelPick').hidden=true;$('#parcelNoPick').hidden=true;gisRefreshNos();$('#importInfo').textContent='';structural();syncInputs();if(map)showCurrentPlot(true)};
+/* ---------- street layer: road centrelines with a width field → setbacks of the chosen parcel ---------- */
+// Street lines are kept in WGS84 as GeoJSON features (the same format and storage key as «مزيد», which then reuses them).
+const ROAD_LAYER_KEY='gis_planner_road_layer_id_v1',ROAD_RADIUS=34;
+let ROADS=[],ROAD_IDX=null,ROAD_LAYER_ID='',ROAD_FIELDS={width:'',name:''},GIS_LAYERS=null,GIS_RENDER=null;
+function shpType(buf){return buf.byteLength>=36?new DataView(buf).getInt32(32,true):0}
+function roadFieldsOf(feats){const ks=[...new Set(feats.flatMap(r=>Object.keys(r.properties||{})))].filter(k=>!k.startsWith('__'));
+  let pref='';try{pref=localStorage.getItem('gpp-road-width-field')||''}catch(e){}
+  const width=(pref&&ks.includes(pref)?pref:'')||ks.find(k=>/width|wdth|عرض/i.test(k))||'';
+  return{width,name:ks.find(k=>k!==width&&/^name$|^name_?ar|^ar_?name|street|road_?name|st_?name|اسم/i.test(k))||'',type:roadTypeField(feats)}}
+function roadWidthOf(rd){return GEO?GEO.parseWidth(rd?.properties?.[ROAD_FIELDS.width]):null}
+function roadConverter(prj,probe){const kind=prj?.kind||(probe&&Math.abs(probe.x)<=180&&Math.abs(probe.y)<=90?'geo':'');
+  if(kind==='geo')return p=>[+p.x,+p.y];
+  if(kind==='utm'&&prj.datum==='WGS84')return p=>{const ll=utm2ll(+p.x,+p.y,prj.zone);return[ll.lon,ll.lat]};
+  throw new Error('إسقاط طبقة الشوارع غير موثّق أو غير مدعوم (المطلوب WGS84 أو UTM على WGS84 مع ملف PRJ).')}
+async function importRoadShp(files,shp,f){
+  try{const base=shp.name.replace(/\.shp$/i,''),get=ext=>files.find(x=>x.name.toLowerCase()===(base+ext).toLowerCase());
+    const geoms=parseSHP(await shp.async('arraybuffer')),dbfF=get('.dbf'),prjF=get('.prj'),cpgF=get('.cpg');
+    const rows=dbfF?parseDBF(await dbfF.async('arraybuffer'),cpgF?await cpgF.async('string'):''):[],prj=prjF?prjInfo(await prjF.async('string')):null;
+    const cv=roadConverter(prj,geoms.find(g=>g?.[0]?.[0])?.[0][0]),feats=[];
+    geoms.forEach((g,i)=>(g||[]).forEach((part,k)=>{if(part.length>=2)feats.push({type:'Feature',properties:{...(rows[i]||{}),__source:i,__part:k},geometry:{type:'LineString',coordinates:part.map(cv)}})}));
+    if(!feats.length)return' · ملف الشوارع لا يحتوي خطوطًا.';
+    return await setRoadLayer(feats,`${f.name} / ${shp.name.split('/').pop()}`)}
+  catch(e){return' · تعذّر قراءة طبقة الشوارع: '+(e.message||e)}}
+async function setRoadLayer(feats,source){ROADS=feats;ROAD_FIELDS=roadFieldsOf(feats);ROAD_IDX=GEO?GEO.buildRoadIndex(ROADS,null,ROAD_RADIUS):null;let note='';
+  if(window.ParcelStore){const id='main-roads-'+mainParcelHash(JSON.stringify(feats.map(r=>[r.geometry.coordinates,r.properties])));
+    try{await ParcelStore.putLayer('roads',id,ROADS,{source,count:ROADS.length,origin:'main'});localStorage.setItem(ROAD_LAYER_KEY,id);ROAD_LAYER_ID=id}catch(e){note=' (لم تُحفظ في المتصفح)'}}
+  drawGisLayers(false);roadInfo();
+  return` · الشوارع: ${ROADS.length} خط${ROAD_FIELDS.width?` · عرض الشارع من الحقل «${ROAD_FIELDS.width}»`:' · لم أجد حقل عرض الشارع'}${note}`}
+// a file that holds only the street layer: the chosen parcel stays, and its setbacks are recalculated
+function roadsOnlyDone(f,note){$('#importInfo').textContent=`${f.name}${note}`;if(S.verts.length>=3)autoStreetSetbacks(true);setView('map');drawGisLayers(!PARCELS.length)}
+async function restoreRoadLayer(){if(!window.ParcelStore)return;let id='';try{id=localStorage.getItem(ROAD_LAYER_KEY)||''}catch(e){}if(!id)return;
+  try{const row=await ParcelStore.getLayer('roads',id);if(!Array.isArray(row?.data)||!row.data.length)return;
+    ROADS=row.data;ROAD_LAYER_ID=id;ROAD_FIELDS=roadFieldsOf(ROADS);ROAD_IDX=GEO?GEO.buildRoadIndex(ROADS,null,ROAD_RADIUS):null;drawGisLayers(false);roadInfo()}
+  catch(e){console.warn('Road layer was not restored:',e)}}
+function roadInfo(){const el=$('#roadSbInfo'),pick=$('#roadWPick'),sel=$('#roadWidthSel');
+  if(pick&&sel&&ROADS.length){const ks=[...new Set(ROADS.flatMap(r=>Object.keys(r.properties||{})))].filter(k=>!k.startsWith('__'));
+    sel.innerHTML=`<option value="">— بدون حقل عرض —</option>`+ks.map(k=>`<option value="${esc(k)}">${esc(k)}</option>`).join('');sel.value=ROAD_FIELDS.width||'';pick.hidden=false}
+  if(!el||!ROADS.length||el.dataset.done)return;
+  el.textContent=`طبقة الشوارع: ${ROADS.length} خط${ROAD_FIELDS.width?` · العرض من «${ROAD_FIELDS.width}»`:' · بلا حقل عرض'}. اختر قطعة من الخريطة لتُحسب ارتداداتها.`}
+// the width field chosen by the user (kept in the browser) wins over the automatic guess
+const ROAD_WFIELD_KEY='gpp-road-width-field';
+$('#roadWidthSel').onchange=e=>{ROAD_FIELDS.width=e.target.value;try{localStorage.setItem(ROAD_WFIELD_KEY,e.target.value)}catch(x){}
+  ROAD_IDX=GEO&&ROADS.length?GEO.buildRoadIndex(ROADS,null,ROAD_RADIUS):ROAD_IDX;drawGisLayers(false);
+  if(!autoStreetSetbacks(false))toast(`حقل عرض الشارع: ${e.target.value||'بدون'}. اضغط «تطبيق ارتدادات الشوارع» لإعادة حساب قطعة معدّلة يدويًا.`)};
+
+// Setback fields of the parcel. With the user rules on: front = street width ÷ 5 (3 … 6 m), side / rear from SIDEDEFECT / REARDEFECT
+// (empty or missing → 0, undocumented; an explicit 0 stays 0). With them off: the parcel's FROTDEFECT (below 1 = share of the
+// street width, else metres) or the planner's rule, and side / rear only when the parcel states them.
+const SB_FIELDS={front:/^(FROTDEFECT|FRONTDEFECT|FRONT_?DEFECT|FRONT_?SB|FRONT_?SETBACK|الارتداد_?الامامي|ارتداد_?امامي)$/i,
+  side:/^(SIDEDEFECT|SIDE_?DEFECT|SIDE_?SB|SIDE_?SETBACK|الارتداد_?الجانبي|ارتداد_?جانبي)$/i,
+  rear:/^(REARDEFECT|REAR_?DEFECT|BACKDEFECT|REAR_?SB|REAR_?SETBACK|الارتداد_?الخلفي|ارتداد_?خلفي)$/i};
+const urOn=()=>!!(ZR&&S.urules&&S.urules.on!==false);
+function parcelSbRule(attrs){const out={user:urOn()},ks=Object.keys(attrs||{});
+  for(const k in SB_FIELDS){const key=ks.find(n=>SB_FIELDS[k].test(n.trim())),raw=key!=null?attrs[key]:null;out[k+'Key']=key||'';
+    if(out.user&&k!=='front'){const u=ZR.userEdgeSb(raw);out[k]=u.sb;out[k+'Doc']=u.documented;continue}
+    const v=raw!=null?parseFloat(String(raw).replace(/[٠-٩]/g,c=>'٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace('٫','.')):NaN;
+    out[k]=Number.isFinite(v)&&v>=0?v:null;out[k+'Doc']=out[k]!==null;if(out[k]===null)out[k+'Key']=''}return out}
+const r2=v=>Math.round(v*100)/100;
+function frontSbFor(w,rule){if(rule.user)return ZR.userFront(w,S.urules);const f=rule.front;
+  if(f===null)return w?txFrontSb(w):null;
+  if(f>0&&f<1)return w?r2(w*f):null;
+  return r2(f)}
+function frontRuleText(rule){if(rule.user){const c=ZR.userCfg(S.urules);return`عرض الشارع ÷ ${nE(c.div,2)}، بحد أدنى ${nE(c.min,2)} م وأقصى ${nE(c.max,2)} م (قاعدة المستخدم)`}
+  const f=rule.front;if(f===null)return'عرض الشارع ÷ 5 بحد أدنى 3 م';if(f>0&&f<1)return`عرض الشارع × ${nE(f,3)} (${rule.frontKey})`;return`${nE(f,2)} م (${rule.frontKey})`}
+const sideRuleText=(rule,k)=>rule[k]===null?'غير محدد في بيانات القطعة':`${nE(rule[k],2)} م ${rule[k+'Doc']?`(${esc(rule[k+'Key'])})`:'(الحقل فارغ أو غير موجود — 0 غير موثق، قاعدة المستخدم)'}`;
+// Setback of every edge of one ring: st = street of each edge (streetsOfRing), P = the ring in metres. Shared by the planner
+// and the whole-plan analysis, so both give the same numbers. Returns null when no edge is on a street.
+// street edge → «أمامي» from that street's width (none without a width: need='width') · short corner cut between two street
+// edges (< 8 m) → «أمامي», the larger of the two · edge facing away from the main street → «خلفي» · the rest → «جانبي».
+function edgeSetbacks(st,P,rule){const n=st.length;if(n!==P.length||!st.some(Boolean))return null;
+  const sg=Math.sign(polyArea(P))||1,E=P.map((a,i)=>{const b=P[(i+1)%n],d=sub(b,a),len=Math.hypot(d.x,d.y)||1;return{len,nOut:mul({x:-d.y/len,y:d.x/len},-sg)}});
+  let p=-1;st.forEach((s,i)=>{if(!s)return;if(p<0)p=i;else{const w=s.width??-1,wp=st[p].width??-1;if(w>wp||(w===wp&&E[i].len>E[p].len))p=i}});
+  const rows=st.map((s,i)=>{if(s){const sb=frontSbFor(s.width,rule);return{role:'front',sb,doc:sb!==null,need:sb===null?'width':'',width:s.width,name:s.street||(s.width?`شارع ${nE(s.width,2)} م`:'شارع')}}
+    if(E[i].len<8&&st[(i+n-1)%n]&&st[(i+1)%n]){const v=[st[(i+n-1)%n],st[(i+1)%n]].map(x=>frontSbFor(x.width,rule)).filter(x=>x!==null);
+      return{role:'front',sb:v.length?Math.max(...v):null,doc:!!v.length,need:v.length?'':'width',chamfer:true,name:'شطفة'}}
+    const rear=dot(E[i].nOut,E[p].nOut)<-0.7,k=rear?'rear':'side';return{role:k,sb:rule[k],doc:!!rule[k+'Doc'],need:'',name:''}});
+  return{rows,primary:p}}
+
+function pcWgs(pc){if(pc._wgs!==undefined)return pc._wgs;let r=null;
+  if(Array.isArray(pc.polygon)&&pc.polygon.length>=3)r=pc.polygon;else{const cv=mainParcelToWgs(pc);if(cv&&pc.ring?.length>=3)r=pc.ring.map(cv)}
+  pc._wgs=r;if(r){const xs=r.map(p=>p[0]),ys=r.map(p=>p[1]);pc._box=[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)]}return r}
+function llInRing(p,R){let c=false;for(let i=0,j=R.length-1;i<R.length;j=i++){const a=R[i],b=R[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
+// Street of every edge of a WGS84 ring ([lon,lat]), or null: {roadIndex,width,street,how}.
+// 1) centre lines: the shared matcher of «مزيد» (nearby, parallel, no other parcel in between);
+// 2) lines drawn on the parcel boundary itself (common in municipal layers): such a line lies on or just inside the edge,
+//    which the centre-line matcher rejects, so an edge with a street line along it (≤ 2.5 m, ≤ 20°, ≥ 30 % of its length) is a street edge.
+function streetsOfRing(ring,self){
+  const c0=ring.reduce((a,p)=>[a[0]+p[0]/ring.length,a[1]+p[1]/ring.length],[0,0]),xs=ring.map(p=>p[0]),ys=ring.map(p=>p[1]),pad=0.0015,bb=[Math.min(...xs)-pad,Math.min(...ys)-pad,Math.max(...xs)+pad,Math.max(...ys)+pad];
+  const blockers=PARCELS.filter(pc=>pc!==self).map(pc=>({pc,r:pcWgs(pc)})).filter(({pc,r})=>r&&pc._box[2]>=bb[0]&&pc._box[0]<=bb[2]&&pc._box[3]>=bb[1]&&pc._box[1]<=bb[3]&&!llInRing(c0,r)).map(x=>x.r);
+  const res=GEO.match({polygon:ring,roads:ROADS,roadIndex:ROAD_IDX,radius:ROAD_RADIUS,streetField:ROAD_FIELDS.name,widthField:ROAD_FIELDS.width,barrierPolygons:blockers}).results;
+  const F=ROAD_IDX.frame,P=ring.map(p=>F.toXY(p)),road=i=>({roadIndex:i,width:roadWidthOf(ROADS[i]),street:String(ROADS[i]?.properties?.[ROAD_FIELDS.name]??'').trim()});
+  const out=res.map((r,i)=>{if(r.status==='يحتاج مراجعة')return null;if(r.status!=='غير صالح'&&r.selected)return{...road(r.selected.roadIndex),how:'centre'};
+    const a=P[i],b=P[(i+1)%P.length],tol=2.5;if(GEO.length(a,b)<0.5)return null;
+    const smp=[.15,.5,.85].map(t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}));let best=null;
+    for(const s of ROAD_IDX.segments){if(s.maxX<Math.min(a.x,b.x)-tol||s.minX>Math.max(a.x,b.x)+tol||s.maxY<Math.min(a.y,b.y)-tol||s.minY>Math.max(a.y,b.y)+tol)continue;
+      const ang=GEO.degDifference(b.x-a.x,b.y-a.y,s.b.x-s.a.x,s.b.y-s.a.y);if(ang>20)continue;const ov=GEO.overlapRatio(a,b,s.a,s.b);if(ov<0.3)continue;
+      const d=Math.min(...smp.map(p=>GEO.segmentDistance(p,s.a,s.b)));if(d>tol)continue;const score=d+ang/10-ov;if(!best||score<best.score)best={score,roadIndex:s.roadIndex}}
+    return best?{...road(best.roadIndex),how:'boundary'}:null});out.status=res.map(r=>r.status);return out}
+
+// Matches every edge of the current parcel to the street beside it (other parcels block streets behind them) and sets its
+// role and setback (edgeSetbacks). Edges edited by hand are kept unless the button is pressed (force).
+function autoStreetSetbacks(force,o={}){const box=$('#roadSbInfo');
+  if(!ROADS.length||!ROAD_IDX||!GEO){if(force)toast('حمّل طبقة الشوارع أولًا (ZIP فيه خطوط الشوارع).');return false}
+  if(S.verts.length<3){if(force)toast('اختر قطعة أولًا.');return false}
+  if(!force&&S.verts.some(v=>v.manual||v.sbSrc==='planner'))return false;
+  M=compute();if(M.bad)return false;
+  const g=buildGeo(),ring=g.L.map(p=>{const ll=g.F.toLL(p);return[ll.lon,ll.lat]});
+  let st;try{st=streetsOfRing(ring,CUR_PC)}catch(e){toast('تعذّر ربط الشوارع: '+(e.message||e));return false}
+  if(st.length!==S.verts.length)return false;const amb=(st.status||[]).map((s,i)=>s==='يحتاج مراجعة'?i+1:0).filter(Boolean);
+  S.verts.forEach((v,i)=>{if(v.streetPick!=null&&v.streetLayer===ROAD_LAYER_ID)st[i]=v.streetPick<0?null:{...roadRef(v.streetPick),how:'manual'}});
+  const rule=parcelSbRule(CUR_PC?.attrs||{}),res=edgeSetbacks(st,g.L,rule);
+  if(!res){// no street at all (also after a manual choice is undone): edges filled automatically go back to the imported state
+    const def=S.projType==='land'?0:roleSb('side');let reset=0;
+    S.verts.forEach(v=>{if(v.sbSrc!=='auto'&&v.nameSrc!=='auto')return;if(o.keepManual&&(v.manual||v.sbSrc==='planner'))return;
+      v.role='side';v.sb=def;v.sbSrc='';v.sbNeed='';delete v.sbDoc;if(v.nameSrc==='auto'){v.name='';v.nameSrc=''}reset++});
+    if(reset){S.mosque=null;S.house=null;S.layout=null;renderVerts();M=compute();persist();schedule();if(map)showCurrentPlot(false)}
+    if(box){box.dataset.done='1';box.textContent='لم يُعثر على شارع ملاصق لأي ضلع من أضلاع هذه القطعة'+(reset?'؛ أُعيدت الأضلاع المحسوبة تلقائيًا إلى حالتها الأصلية.':'؛ بقيت الارتدادات كما هي.')}if(force)toast('لا يوجد شارع ملاصق لهذه القطعة في طبقة الشوارع.');return false}
+  // nothing is assumed beyond the rules: a setback without its input (a street without width) keeps its value, sbSrc empty,
+  // so the transaction form says «غير محدد»; sbDoc=false marks a 0 used because the parcel's field was empty (user rule)
+  const lines=[];
+  S.verts.forEach((v,i)=>{const r=res.rows[i];if(o.keepManual&&(v.manual||v.sbSrc==='planner')&&v.streetPick==null)return;v.manual=false;v.role=r.role;v.sbNeed=r.need;
+    if(r.sb===null){if(v.sbSrc==='auto')v.sbSrc='';v.sbDoc=undefined}else{v.sb=r.sb;v.sbSrc='auto';v.sbDoc=r.doc}
+    v.stW=r.role==='front'&&!r.chamfer&&r.width>0?r.width:undefined;
+    if(r.role==='front'){v.name=r.name;v.nameSrc='auto';lines.push(`ضلع ${i+1}: ${r.chamfer?'شطفة الناصية':v.name}${r.need?' — عرض الشارع غير متوفر':''} ← أمامي ${r.sb!==null?nE(r.sb,2)+' م':'يحتاج عرض الشارع'}`)}
+    else if(v.nameSrc==='auto'){v.name='';v.nameSrc=''}});
+  const pw=st[res.primary]?.width;if(!String(S.tx.streetW??'').trim()&&pw)S.tx.streetW=String(pw);
+  // the other parts and the holes of a multipart parcel: the same rules (outer rings matched to their own streets; hole edges and
+  // a part without a street take the side setback). Edges set elsewhere («مزيد» or by hand) are kept.
+  (S.geom?.rings||[]).forEach(R=>{const ll=R.ll||[];if(ll.length<3)return;let rows=null;
+    if(R.ring===0){try{const c=ll.reduce((s,p)=>[s[0]+p[0]/ll.length,s[1]+p[1]/ll.length],[0,0]),F=GEO.frame(c[0],c[1]),r0=edgeSetbacks(streetsOfRing(ll,CUR_PC),ll.map(p=>F.toXY(p)),rule);rows=r0?r0.rows:null}catch(e){}}
+    R.edges.forEach((e,j)=>{if(e.sbSrc&&e.sbSrc!=='auto')return;const r=rows?rows[j]:{role:'side',sb:rule.side,doc:!!rule.sideDoc,need:'',name:''};
+      if(R.ring===0){e.role=r.role;if(r.role==='front'){e.name=r.name;e.nameSrc='auto'}else if(e.nameSrc==='auto'){e.name='';e.nameSrc=''}}
+      e.sbNeed=r.need;if(r.sb===null){if(e.sbSrc==='auto')e.sbSrc=''}else{e.sb=r.sb;e.sbSrc='auto';e.sbDoc=r.doc}})});
+  S.mosque=null;S.house=null;S.layout=null;renderVerts();M=compute();syncInputs();txHints();persist();schedule();if(map)showCurrentPlot(false);
+  const ud=res.rows.map((r,i)=>r.sb===0&&!r.doc?i+1:0).filter(Boolean);
+  if(box){box.dataset.done='1';box.innerHTML=`<b>ارتدادات الشوارع</b> — الأمامي: ${esc(frontRuleText(rule))} · الجانبي ${sideRuleText(rule,'side')} · الخلفي ${sideRuleText(rule,'rear')}<br>${lines.map(esc).join('<br>')}`+
+    (amb.length?`<br><span class="warn">الضلع ${esc(txNos(amb))}: شارعان متقاربان — لم يُربط تلقائيًا؛ اختر الشارع يدويًا من تشخيص الضلع.</span>`:'')+
+    (ud.length?`<br><span class="warn">الضلع ${esc(txNos(ud))}: ارتداد 0 م غير موثق (الحقل فارغ في بيانات القطعة) — قاعدة المستخدم، ليس اشتراطًا رسميًا.</span>`:'')}
+  toast(`طُبّقت ارتدادات الشوارع: ${lines.length} ضلع على شارع.`);return true}
+$('#sbStreets').onclick=()=>autoStreetSetbacks(true);
+/* ---------- «قواعد المستخدم»: ground / upper-floor ratios and the front rule, supplied by the user (not official) ----------
+   applied to every parcel when it is chosen; a value typed by hand («يدوي») or from a saved rule («قاعدة») is never replaced,
+   a GIS value (e.g. BUILD_RATI) is replaced and kept as a note in S.tx.zGis */
+function parkNorm(tx=S.tx){const v=String(tx.parkPct??'').trim();if(!v||!/[ء-يA-Za-z]/.test(v))return false;
+  if(!String(tx.parkTxt??'').trim())tx.parkTxt=v;tx.parkPct='';if(tx.zSrc){tx.zSrc.parkTxt=tx.zSrc.parkTxt||tx.zSrc.parkPct||'manual';tx.zSrc.parkPct=''}return true}
+$('#txPark').addEventListener('change',()=>{if(parkNorm()){$('#txPark').value='';$('#txParkTxt').value=S.tx.parkTxt;persist();schedule();if(typeof zrRender==='function')try{zrRender()}catch(e){}
+  toast('نُقل النص إلى «متطلبات المواقف» (خانة النسبة للأرقام فقط) ويظهر في النموذج في صف «اشتراطات مواقف السيارات».')}});
+function userApply(){if(!ZR)return;parkNorm();const c=ZR.userCfg(S.urules);S.tx.zSrc=S.tx.zSrc||{...defaults().tx.zSrc};S.tx.zGis=S.tx.zGis||{};
+  for(const [k,val] of [['ratio',c.ground],['upRatio',c.upper]]){const src=S.tx.zSrc[k];if(src==='manual'||src==='rule')continue;
+    if(c.on){if(src==='gis'&&String(S.tx[k]??'').trim())S.tx.zGis[k]=String(S.tx[k]).trim();S.tx[k]=String(val);S.tx.zSrc[k]='user'}
+    else if(src==='user'){S.tx[k]=S.tx.zGis[k]||'';S.tx.zSrc[k]=S.tx[k]?'gis':''}}}
+function urSync(){if(!ZR)return;const c=ZR.userCfg(S.urules);$('#urOn').checked=c.on;
+  document.querySelectorAll('[data-ur]').forEach(el=>{const v=S.urules?.[el.dataset.ur];if(document.activeElement!==el)el.value=v??''});
+  $('#urInfo').textContent=c.on?`مطبّقة: الأمامي = عرض الشارع ÷ ${c.div} بين ${c.min} و${c.max} م (من حقل عرض الشارع في طبقة الطرق؛ بدون عرض لا يُحسب) · الجانبي من SIDEDEFECT والخلفي من REARDEFECT (الحقل الفارغ = 0 م غير موثق، والصفر المكتوب يبقى صفرًا) · الدور الأرضي ${c.ground}٪ والدور العلوي ${c.upper}٪ من مساحة الأرض، داخل منطقة البناء بعد الارتدادات. المصدر: قاعدة المستخدم — ليست اشتراطًا رسميًا. القيم المعدّلة يدويًا لا تُستبدل.`:
+    'متوقفة: تُستخدم بيانات القطعة وحقول GIS كما هي (لا يُفترض أي اشتراط).'}
+function urChanged(){S.urules={...ZR.USER_RULES,...(S.urules||{})};S.urules.on=$('#urOn').checked;
+  document.querySelectorAll('[data-ur]').forEach(el=>{const v=ZR.num(el.value);if(v!==null&&v>=0)S.urules[el.dataset.ur]=v});
+  const c=ZR.userCfg(S.urules);if(c.ground>100||c.upper>100)toast('النسبة يجب ألا تزيد عن 100٪.');
+  userApply();if(S.verts.length>=3)autoStreetSetbacks(false);urSync();syncInputs();txHints();ZR_NOW=null;persist();schedule()}
+$('#urOn').onchange=urChanged;document.querySelectorAll('[data-ur]').forEach(el=>el.addEventListener('change',urChanged));
+
+/* ---------- results of every parcel: saved for each parcel, the whole plan analysed in one pass ---------- */
+let PLAN_RES=new Map(),PRES_T=0;const PRES_PENDING=new Map();
+const PLAN_KEY=()=>'plan-analysis:'+(MAIN_PARCEL_LAYER_ID||'none');
+// the planner's own figures of the chosen parcel (the same zoning state as the panel and the transaction form): taken at once
+// (a quick switch to another parcel cannot lose them), written to the browser store shortly after
+function queueParcelResult(st){if(!st||!CUR_PC?.stableId)return;const pc=CUR_PC;
+  const Z=st.Z,R=st.R,row={id:pc.stableId,no:pc.no||'',src:'المخطط',at:Date.now(),A:Z.A,G:Z.G,gState:Z.gState,ground:Z.footprint,upper:Z.upper,floors:R.floors,gross:Z.gross,
+    streets:S.verts.filter(v=>v.role==='front'&&v.nameSrc==='auto'&&v.name!=='شطفة').map(v=>v.name).join(' / '),sbs:S.verts.map(v=>v.sb).join(' / '),
+    undoc:S.verts.filter(v=>v.sbSrc==='auto'&&v.sbDoc===false).length,needW:S.verts.filter(v=>v.sbNeed==='width').length,manual:S.verts.some(v=>v.manual||v.sbSrc==='planner'||v.streetPick!=null)};
+  PLAN_RES.set(pc.stableId,row);if(!window.ParcelStore)return;PRES_PENDING.set(pc.stableId,row);clearTimeout(PRES_T);
+  PRES_T=setTimeout(()=>{const list=[...PRES_PENDING.values()];PRES_PENDING.clear();list.forEach(r=>ParcelStore.putRecord('parcel-result:'+r.id,r).catch(()=>{}))},400)}
+const FLOOR_RE=/^(FLOORSNO|FLOORS_NO|MAX_FLOORS|NO_FLOORS|Floors|عدد الأدوار|أقصى عدد أدوار|الحد الأقصى لعدد الأدوار)$/i,COV_RE=/^(BUILD_RATI|BUILD_RATIO|BLD_RATIO|BuildingRatio|Coverage|نسبة البناء|نسبة التغطية)$/i;
+const attrOf=(a,re)=>{const k=Object.keys(a||{}).find(n=>re.test(n.trim()));return k?String(a[k]??'').trim():''};
+// one parcel, without opening it: every part and hole, streets of every outer ring, the setbacks of edgeSetbacks, the clipped
+// buildable area, and the zoning figures of ZR.compute — the same functions as the planner
+function analyzeParcel(pc){const attrs=pc.attrs||pc.props||{},open=R=>{const r=(R||[]).map(p=>[+p[0],+p[1]]);if(r.length>3&&Math.abs(r[0][0]-r.at(-1)[0])<1e-12&&Math.abs(r[0][1]-r.at(-1)[1])<1e-12)r.pop();return r};
+  const parts=(Array.isArray(pc.parts)&&pc.parts.length?pc.parts:[{outer:pcWgs(pc),holes:[]}]).map(p=>({outer:open(p.outer),holes:(p.holes||[]).map(open).filter(h=>h.length>=3)})).filter(p=>p.outer.length>=3);
+  if(!parts.length)return{id:pc.stableId,no:pc.no||'',error:'هندسة غير صالحة'};
+  const all=parts.flatMap(p=>p.outer),c=all.reduce((s,p)=>[s[0]+p[0]/all.length,s[1]+p[1]/all.length],[0,0]),F=GEO.frame(c[0],c[1]),xy=R=>R.map(p=>F.toXY(p));
+  const rule=parcelSbRule(attrs),outs=[],widths=new Set();let partial=false,streets=0,undoc=0,needW=0;
+  parts.forEach(p=>{const st=streetsOfRing(p.outer,pc),res=edgeSetbacks(st,xy(p.outer),rule);outs.push(res);
+    if(res)res.rows.forEach((r,i)=>{if(r.sb===null)partial=true;if(r.need)needW++;if(r.sb===0&&!r.doc)undoc++;if(st[i]){streets++;if(st[i].width)widths.add(st[i].width)}})});
+  const side=rule.side??0,holeSb=R=>R.map(()=>side);if(rule.side===null)partial=true;
+  const noStreet=!outs.some(Boolean),P=parts.map(p=>({outer:xy(p.outer),holes:p.holes.map(xy)}));
+  const clip=noStreet?null:GEO.buildableClip(P,(k,r,n)=>r===0?(outs[k]?outs[k].rows.map(x=>x.sb??0):Array(n).fill(side)):Array(n).fill(side),window.polygonClipping);
+  const A=clip?clip.original:P.reduce((s,p)=>s+Math.abs(GEO.ringArea(p.outer))-p.holes.reduce((t,h)=>t+Math.abs(GEO.ringArea(h)),0),0);
+  const holesArea=P.reduce((s,p)=>s+p.holes.reduce((t,h)=>t+Math.abs(GEO.ringArea(h)),0),0),cfg=ZR.userCfg(S.urules);
+  const tx={floors:attrOf(attrs,FLOOR_RE)};if(urOn()){tx.ratio=String(cfg.ground);tx.upRatio=String(cfg.upper)}else tx.ratio=attrOf(attrs,COV_RE);
+  const gState=noStreet?'none':!clip.valid?'invalid':partial?'partial':'ok',R=ZR.readRegs(tx),Z=ZR.compute({A,G:clip&&clip.valid?clip.buildable:null,gState,regs:R,holesArea});
+  return{id:pc.stableId,no:pc.no||'',src:'تحليل تلقائي',at:Date.now(),A,G:Z.G,gState,ground:Z.footprint,upper:Z.upper,floors:R.floors,gross:Z.gross,parts:parts.length,holes:parts.reduce((s,p)=>s+p.holes.length,0),
+    streets:[...widths].map(w=>`شارع ${w} م`).join(' / '),streetEdges:streets,sbs:outs.map(o=>o?o.rows.map(r=>r.sb??'؟').join(' / '):'—').join(' | '),undoc,needW,
+    note:noStreet?'لا يوجد شارع ملاصق في طبقة الطرق':clip&&!clip.valid?clip.errors.join(' '):needW?'شارع بلا عرض':''}}
+async function runPlanAnalysis(){if(!PARCELS.length){toast('حمّل طبقة القطع أولًا.');return}if(!ROADS.length||!ROAD_IDX){toast('حمّل طبقة الشوارع أولًا.');return}
+  const btn=$('#planRun'),info=$('#planInfo');btn.disabled=true;const rows=[],manual=new Set(),saved=new Map();
+  // a parcel edited by hand in the planner keeps the planner's own saved figures
+  try{(await ParcelStore.listRecords('planner-parcel:')).forEach(r=>{const v=r.value;if(v?.verts?.some(x=>x.manual||x.sbSrc==='planner'||x.streetPick!=null))manual.add(v.stableId)});
+    (await ParcelStore.listRecords('parcel-result:')).forEach(r=>{if(r.value?.id)saved.set(r.value.id,r.value)})}catch(e){}
+  PLAN_RES.forEach((r,id)=>{if(r.src!=='المخطط')return;if(!saved.has(id)||r.at>=saved.get(id).at)saved.set(id,r);if(r.manual)manual.add(id)});
+  try{for(let i=0;i<PARCELS.length;i++){const pc=PARCELS[i];let row;
+      if(manual.has(pc.stableId)&&saved.has(pc.stableId))row={...saved.get(pc.stableId),src:'المخطط (معدّل يدويًا)'};
+      else{try{row=analyzeParcel(pc)}catch(e){row={id:pc.stableId,no:pc.no||'',error:e.message||String(e)}}}
+      rows.push(row);PLAN_RES.set(pc.stableId,row);if(i%15===14){info.textContent=`جارٍ تحليل المخطط… ${i+1} / ${PARCELS.length}`;await new Promise(r=>setTimeout(r,0))}}
+    try{await ParcelStore.putRecord(PLAN_KEY(),{at:Date.now(),rules:{...S.urules},rows})}catch(e){}
+    planSummary(rows);drawGisLayers(false);toast(`حُلّلت ${rows.length} قطعة وحُفظت نتائجها.`)}
+  finally{btn.disabled=false}}
+function planSummary(rows){const ok=rows.filter(r=>!r.error&&r.ground!=null),f=v=>fmtU(Math.round(v*100)/100,2);
+  const sum=k=>ok.reduce((s,r)=>s+(r[k]||0),0);
+  $('#planInfo').textContent=rows.length?`المخطط: ${rows.length} قطعة · بنتائج كاملة ${ok.length} · بلا شارع ${rows.filter(r=>r.gState==='none').length} · بارتداد غير موثق ${rows.filter(r=>r.undoc).length} · تحتاج عرض شارع ${rows.filter(r=>r.needW).length}`+
+    (ok.length?` — مجموع الأراضي ${f(sum('A'))} م² · داخل الارتدادات ${f(sum('G'))} م² · أقصى أرضي ${f(sum('ground'))} م² · أقصى علوي ${f(sum('upper'))} م²`:'')+'. مرّر المؤشر على قطعة في الخريطة لرؤية نتيجتها.':''}
+function planCsv(){const rows=[...PLAN_RES.values()];if(!rows.length){toast('حلّل المخطط أولًا.');return}
+  const h=['رقم القطعة','المصدر','مساحة الأرض م²','داخل الارتدادات م²','أقصى أرضي م²','أقصى علوي (لكل دور) م²','عدد الأدوار','إجمالي المسطحات م²','الشوارع','ارتدادات الأضلاع م','أضلاع بارتداد غير موثق','أضلاع تحتاج عرض الشارع','الأجزاء','الفراغات','ملاحظة'];
+  const n=v=>v==null||!Number.isFinite(+v)?'':(Math.round(v*100)/100).toFixed(2),q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const lines=[h.map(q).join(','),...rows.map(r=>[r.no,r.src,n(r.A),n(r.G),n(r.ground),n(r.upper),r.floors??'',n(r.gross),r.streets,r.sbs,r.undoc??'',r.needW??'',r.parts??'',r.holes??'',r.error||r.note||(r.gState==='partial'?'مبدئي':'')].map(q).join(','))];
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='parcel-results.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+async function restorePlanResults(){if(!window.ParcelStore||!MAIN_PARCEL_LAYER_ID)return;try{const v=await ParcelStore.getRecord(PLAN_KEY());
+    if(Array.isArray(v?.rows)){v.rows.forEach(r=>PLAN_RES.set(r.id,r));planSummary(v.rows)}
+    (await ParcelStore.listRecords('parcel-result:')).forEach(r=>{const x=r.value;if(x?.id&&(!PLAN_RES.get(x.id)||x.at>PLAN_RES.get(x.id).at))PLAN_RES.set(x.id,x)});drawGisLayers(false)}catch(e){}}
+function planTip(pc){const r=PLAN_RES.get(pc.stableId);if(!r)return'';if(r.error)return'<br>'+esc(r.error);const f=v=>v==null?'—':fmtU(Math.round(v*100)/100,2);
+  return`<br>الأرض ${f(r.A)} م² · بعد الارتدادات ${f(r.G)} م²<br>أرضي ${f(r.ground)} · علوي ${f(r.upper)} · الإجمالي ${f(r.gross)} م²${r.note?'<br>'+esc(r.note):''}`}
+$('#planRun').onclick=()=>runPlanAnalysis();$('#planCsv').onclick=planCsv;
+/* ---------- street-link diagnostics of one edge: the 3 nearest streets, why each is or is not linked, a manual choice ----------
+   The thresholds are those of the automatic link (streetsOfRing): centre line ≤ 34 m on average (mid point ≤ 49 m), ≤ 35°,
+   ≥ 24 % overlap, nothing in between; a line on the parcel boundary ≤ 2.5 m, ≤ 20°, ≥ 30 % overlap. */
+const DIAG={radius:ROAD_RADIUS,angle:35,overlap:0.24,bTol:2.5,bAngle:20,bOverlap:0.3,look:120};
+let DIAG_LAYER=null,DIAG_EDGE=-1,DIAG_OUT=null;
+// centre line vs street boundary: from a type field of the road layer when it has one, else not stated (a geometric hint only)
+const ROAD_TYPE_RE=/^(type|line_?type|road_?type|kind|class|ltype|feat_?type|نوع.*|تصنيف.*)$/i;
+function roadKindOf(rd){const k=ROAD_FIELDS.type;if(!k)return'';const v=String(rd?.properties?.[k]??'').toLowerCase();
+  if(/محور|مركز|center|centre|axis|^cl$|centerline|centreline|middle/.test(v))return'centre';
+  if(/حد|حافة|رصيف|edge|bound|curb|kerb|border|row|side|outline/.test(v))return'edge';return''}
+function roadTypeField(feats){const ks=[...new Set(feats.flatMap(r=>Object.keys(r.properties||{})))].filter(k=>!k.startsWith('__')&&ROAD_TYPE_RE.test(k));
+  // a field counts only when its values name the two kinds of line
+  return ks.find(k=>feats.some(r=>/محور|center|centre|axis|^cl$|حد|edge|bound|curb|kerb/i.test(String(r.properties?.[k]??''))))||''}
+const roadRef=i=>({roadIndex:i,width:roadWidthOf(ROADS[i]),street:String(ROADS[i]?.properties?.[ROAD_FIELDS.name]??'').trim()});
+const roadLabel=i=>{const r=roadRef(i);return(r.street||'شارع بلا اسم')+(r.width?` · عرض ${nE(r.width,2)} م`:' · العرض غير محدد')+` (خط ${i+1})`};
+// the current parcel's main ring in WGS84, as the automatic link reads it
+function curRingLL(){const g=buildGeo();return g.L.map(p=>{const ll=g.F.toLL(p);return[ll.lon,ll.lat]})}
+function diagnoseEdge(ring,i,self){if(!ROAD_IDX||!GEO||!ring||ring.length<3)return null;
+  const F=ROAD_IDX.frame,P=ring.map(p=>F.toXY(p)),n=P.length,a=P[i],b=P[(i+1)%n],dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);if(len<0.05)return null;
+  const smp=[.15,.5,.85].map(t=>({x:a.x+t*dx,y:a.y+t*dy})),mid=smp[1],L=DIAG.look;
+  const c0=ring.reduce((s,p)=>[s[0]+p[0]/n,s[1]+p[1]/n],[0,0]),pad=0.002,xs=ring.map(p=>p[0]),ys=ring.map(p=>p[1]),bb=[Math.min(...xs)-pad,Math.min(...ys)-pad,Math.max(...xs)+pad,Math.max(...ys)+pad];
+  const blockers=PARCELS.filter(pc=>pc!==self).map(pc=>({pc,r:pcWgs(pc)})).filter(({pc,r})=>r&&pc._box[2]>=bb[0]&&pc._box[0]<=bb[2]&&pc._box[3]>=bb[1]&&pc._box[1]<=bb[3]&&!llInRing(c0,r)).map(x=>({pc:x.pc,P:x.r.map(p=>F.toXY(p))}));
+  const inR=(p,R)=>{let c=false;for(let k=0,j=R.length-1;k<R.length;j=k++){const u=R[k],w=R[j];if((u.y>p.y)!==(w.y>p.y)&&p.x<(w.x-u.x)*(p.y-u.y)/(w.y-u.y)+u.x)c=!c}return c};
+  const cpOf=(p,s)=>{const ux=s.b.x-s.a.x,uy=s.b.y-s.a.y,d=ux*ux+uy*uy,t=d?Math.max(0,Math.min(1,((p.x-s.a.x)*ux+(p.y-s.a.y)*uy)/d)):0;return{x:s.a.x+t*ux,y:s.a.y+t*uy}};
+  const byRoad=new Map();
+  for(const s of ROAD_IDX.segments){if(s.maxX<Math.min(a.x,b.x)-L||s.minX>Math.max(a.x,b.x)+L||s.maxY<Math.min(a.y,b.y)-L||s.minY>Math.max(a.y,b.y)+L)continue;
+    const ds=smp.map(p=>GEO.segmentDistance(p,s.a,s.b)),dMin=Math.min(...ds),prev=byRoad.get(s.roadIndex);
+    const ang=GEO.degDifference(dx,dy,s.b.x-s.a.x,s.b.y-s.a.y),ov=GEO.overlapRatio(a,b,s.a,s.b);
+    // per street: its most favourable segment (a parallel overlapping one first, then the nearest)
+    const fit=(ang<=DIAG.angle&&ov>=DIAG.overlap?0:1)*1e6+dMin;if(prev&&prev.fit<=fit)continue;
+    byRoad.set(s.roadIndex,{fit,s,roadIndex:s.roadIndex,dMid:ds[1],dAvg:(ds[0]+ds[1]+ds[2])/3,dMin,ang,ov,cp:cpOf(mid,s)})}
+  const rows=[...byRoad.values()].sort((x,y)=>x.dMin-y.dMin).slice(0,3).map(c=>{
+    const along=t=>({x:mid.x+(c.cp.x-mid.x)*t,y:mid.y+(c.cp.y-mid.y)*t}),ts=[.2,.4,.6,.8];
+    const inside=inR(c.cp,P),own=!inside&&ts.some(t=>inR(along(t),P)),blk=blockers.find(B=>ts.some(t=>inR(along(t),B.P)));
+    const onBoundary=c.dMin<=DIAG.bTol&&c.ang<=DIAG.bAngle&&c.ov>=DIAG.bOverlap;
+    const why=[];
+    if(c.dAvg>DIAG.radius||c.dMid>DIAG.radius*1.45)why.push({k:'far',t:`بعيد (${nE(c.dMid,1)} م > ${DIAG.radius} م)`});
+    if(c.ang>DIAG.angle)why.push({k:'angle',t:`اختلاف اتجاه ${nE(c.ang,0)}° (> ${DIAG.angle}°)`});
+    if(c.ov<DIAG.overlap)why.push({k:'overlap',t:`تداخل غير كافٍ ${nE(c.ov*100,0)}٪ (< ${DIAG.overlap*100}٪)`});
+    if(blk)why.push({k:'blocked',t:`قطعة حاجزة: ${blk.pc.no||blk.pc.label||'قطعة'}`,pc:blk.pc.no||''});
+    if(own)why.push({k:'own',t:'خلف القطعة نفسها (الشارع على الجهة المقابلة)'});
+    if(inside&&!onBoundary)why.push({k:'inside',t:'الخط داخل القطعة وليس على حدها'});
+    const kind=roadKindOf(ROADS[c.roadIndex]);
+    return{...roadRef(c.roadIndex),dist:c.dMid,dMin:c.dMin,angle:c.ang,overlap:c.ov,blockedBy:blk?(blk.pc.no||blk.pc.label||'قطعة'):'',own,inside,
+      kind,kindTxt:kind==='centre'?'محور شارع (من البيانات)':kind==='edge'?'حد شارع (من البيانات)':onBoundary?'خط على حد القطعة (استنتاج هندسي)':'نوع الخط غير محدد في البيانات',
+      ok:why.length===0||onBoundary,how:onBoundary?'boundary':why.length?'':'centre',why:onBoundary?[]:why,
+      from:F.toLL(mid),to:F.toLL(c.cp)}});
+  return{edge:i,len,rows}}
+
+// the panel under the setbacks table, and the lines on the map
+function edgeDiagShow(i){DIAG_EDGE=i;const box=$('#edgeDiag');if(!box)return;
+  if(i<0||!ROADS.length||S.verts.length<3){box.hidden=true;diagDraw(null);return}
+  let d=null;try{d=diagnoseEdge(curRingLL(),i,CUR_PC)}catch(e){console.warn(e)}DIAG_OUT=d;box.hidden=false;
+  const v=S.verts[i],st=v.role==='front'&&v.nameSrc==='auto'?v.name:'',pick=v.streetPick!=null&&v.streetLayer===ROAD_LAYER_ID?v.streetPick:null;
+  const linked=pick!==null?(pick<0?'بدون شارع (اختيار يدوي)':`${roadLabel(pick)} — اختيار يدوي`):st?`${st} — ربط تلقائي`:'غير مرتبط بشارع';
+  if(!d||!d.rows.length){box.innerHTML=`<div class="sub">تشخيص ربط الضلع ${i+1}</div><div class="hint">لا يوجد أي خط شارع في حدود ${DIAG.look} م من هذا الضلع. الحالة: ${esc(linked)}</div>`;diagDraw(null);return}
+  const f1=v=>nE(v,1);
+  let ms='';try{ms=streetsOfRing(curRingLL(),CUR_PC).status?.[i]||''}catch(e){}
+  const msTxt=ms==='يحتاج مراجعة'?'شارعان متقاربان بنفس الدرجة — لم يُربط تلقائيًا لأن العلاقة غير مؤكدة؛ اختر الشارع يدويًا.':ms?`نتيجة المطابقة التلقائية: ${ms}`:'';
+  box.innerHTML=`<div class="sub">تشخيص ربط الضلع ${i+1} — أقرب ${d.rows.length} شوارع</div><div class="hint">الحالة الحالية: <b>${esc(linked)}</b>${msTxt?`<br><span class="${ms==='يحتاج مراجعة'?'warn':''}">${esc(msTxt)}</span>`:''}</div>`+
+    `<div class="diag-list">`+d.rows.map((r,k)=>`<div class="diag-card ${r.ok?'ok':'no'}" data-drow="${r.roadIndex}"><div class="diag-h"><b>${k+1}. ${esc(roadLabel(r.roadIndex))}</b>`+
+      `<button class="sm" data-dpick="${r.roadIndex}"${pick===r.roadIndex?' disabled':''}>ربط يدويًا</button></div><div class="meta">${esc(r.kindTxt)}</div>`+
+      `<div class="meta">المسافة <b>${f1(r.dist)} م</b> من منتصف الضلع (أقرب نقطة ${f1(r.dMin)} م) · الاتجاه ${nE(r.angle,0)}° · التداخل ${nE(r.overlap*100,0)}٪</div>`+
+      (r.ok?`<div class="good">مقبول (${r.how==='boundary'?'خط على حد القطعة':'محور'})</div>`:r.why.map(w=>`<div class="warn">${esc(w.t)}</div>`).join(''))+`</div>`).join('')+`</div>`+
+    `<div class="btns"><button class="sm" data-dpick="-1">هذا الضلع بدون شارع</button>${pick!==null?'<button class="sm" data-dpick="auto">إلغاء الاختيار اليدوي</button>':''}</div>`+
+    `<div class="hint">لا يُربط الشارع تلقائيًا إلا إذا تحققت كل الشروط (المسافة والاتجاه والتداخل وعدم وجود قطعة حاجزة) ولم يتقارب شارعان. الخط المنقط على الخريطة من منتصف الضلع إلى كل شارع.</div>`;
+  diagDraw(d)}
+function diagDraw(d){if(!map||!window.L)return;if(DIAG_LAYER){map.removeLayer(DIAG_LAYER);DIAG_LAYER=null}if(!d||!d.rows.length)return;
+  DIAG_LAYER=L.layerGroup().addTo(map);
+  d.rows.forEach((r,k)=>{const A=[r.from[1],r.from[0]],B=[r.to[1],r.to[0]],c=r.ok?'#3ddc84':k===0?'#ff5c8a':'#ffb3c7';
+    L.polyline([A,B],{color:c,weight:k===0?3:2,dashArray:'6 5',interactive:false,pane:'markerPane'}).addTo(DIAG_LAYER);
+    L.circleMarker(B,{radius:4,color:c,fillColor:c,fillOpacity:1,interactive:false,pane:'markerPane'}).addTo(DIAG_LAYER);
+    L.marker([(A[0]+B[0])/2,(A[1]+B[1])/2],{interactive:false,icon:L.divIcon({className:'mapdiag',html:`${nE(r.dist,1)} م`,iconSize:[60,16]})}).addTo(DIAG_LAYER)})}
+// manual choice of the street of one edge (a blocking parcel needs a confirmation); kept with the parcel, cleared by «إلغاء»
+function edgePick(i,val){const v=S.verts[i];if(!v)return;
+  if(val==='auto'){delete v.streetPick;delete v.streetLayer}
+  else{const ri=+val;if(ri>=0){const r=DIAG_OUT?.rows.find(x=>x.roadIndex===ri);
+      if(r&&r.blockedBy&&!confirm(`تحذير: القطعة ${r.blockedBy} تقع بين الضلع ${i+1} وهذا الشارع، فقد لا يكون الضلع على هذا الشارع.\nهل تريد ربطه يدويًا رغم ذلك؟`))return;
+      if(r&&r.own&&!confirm(`تحذير: هذا الشارع خلف القطعة نفسها (على الجهة المقابلة للضلع ${i+1}).\nهل تريد ربطه يدويًا رغم ذلك؟`))return}
+    v.streetPick=ri;v.streetLayer=ROAD_LAYER_ID}
+  // the parcel's setbacks are recalculated with this choice (edges typed by hand stay as they are)
+  if(!autoStreetSetbacks(true,{keepManual:true})){persist();schedule()}
+  toast(val==='auto'?`الضلع ${i+1}: عاد للربط التلقائي.`:+val<0?`الضلع ${i+1}: بدون شارع (اختيار يدوي).`:`الضلع ${i+1}: رُبط يدويًا بـ ${roadLabel(+val)}.`);
+  edgeDiagShow(i)}
+$('#edgeDiag').addEventListener('click',e=>{const b=e.target.closest('[data-dpick]');if(!b||DIAG_EDGE<0)return;edgePick(DIAG_EDGE,b.dataset.dpick)});
+$('#sbody').addEventListener('click',e=>{const tr=e.target.closest('tr[data-edge]');if(tr)edgeDiagShow(+tr.dataset.edge)});
+$('#sbody').addEventListener('focusin',e=>{const tr=e.target.closest('tr[data-edge]');if(tr&&+tr.dataset.edge!==DIAG_EDGE)edgeDiagShow(+tr.dataset.edge)});
+$('#roadBtn').onclick=()=>$('#roadFile').click();
+$('#roadFile').onchange=e=>{const f=e.target.files[0];if(f)importRoadFile(f);e.target.value=''};
+// the street button reads only the line layer of a file (a ZIP that also holds parcels keeps the current parcel layer)
+async function importRoadFile(f){let note='';
+  try{if(/\.zip$/i.test(f.name)){if(!window.JSZip)throw new Error('مكتبة فك الضغط لم تُحمَّل.');const z=await JSZip.loadAsync(f),files=Object.values(z.files).filter(x=>!x.dir&&!/__MACOSX/.test(x.name));
+      for(const s0 of files.filter(x=>/\.shp$/i.test(x.name)))if([3,13,23].includes(shpType(await s0.async('arraybuffer'))))note+=await importRoadShp(files,s0,f)}
+    else{const j=JSON.parse(await f.text()),feats=(j.type==='FeatureCollection'?j.features:[j]).filter(ft=>/LineString/.test(ft?.geometry?.type||''));
+      if(feats.length)note=await setRoadLayer(feats.flatMap(ft=>(ft.geometry.type==='LineString'?[ft.geometry.coordinates]:ft.geometry.coordinates).filter(c=>c?.length>=2).map((c,k)=>({type:'Feature',properties:{...(ft.properties||{}),__part:k},geometry:{type:'LineString',coordinates:c.map(p=>[+p[0],+p[1]])}}))),f.name)}}
+  catch(e){toast('تعذّر قراءة الملف: '+(e.message||e));return}
+  if(!note){toast('لم أجد خطوط شوارع (Polyline) في الملف.');return}
+  roadsOnlyDone(f,note)}
+
+// All parcels and streets on the satellite map; clicking a parcel selects it (and calculates its setbacks).
+function drawGisLayers(fit){const pb=$('#planBtns');if(pb)pb.hidden=!PARCELS.length;if(!map||!window.L)return;if(GIS_LAYERS){map.removeLayer(GIS_LAYERS);GIS_LAYERS=null}
+  if(!PARCELS.length&&!ROADS.length)return;GIS_RENDER=GIS_RENDER||L.canvas({pane:'gisPane',padding:0.5,tolerance:3});
+  const grp=L.featureGroup();
+  PARCELS.forEach(pc=>{const r=pcWgs(pc);if(!r)return;const cur=pc===CUR_PC;
+    const poly=L.polygon(r.map(p=>[p[1],p[0]]),{renderer:GIS_RENDER,color:cur?'#ffd54a':'#ffffff',weight:cur?2:1,opacity:0.9,fillColor:'#00e5c0',fillOpacity:cur?0.12:0.04});
+    poly.on('click',()=>{if(drawMode)return;activateParcel(pc).then(()=>{if(CUR_PC===pc)drawGisLayers(false)}).catch(err=>toast(err.message||String(err)))});
+    poly.on('mouseover',()=>poly.setStyle({fillOpacity:0.28}));poly.on('mouseout',()=>poly.setStyle({fillOpacity:pc===CUR_PC?0.12:0.04}));
+    const no=pc.no||gisFields(pc.attrs||{}).no;poly.bindTooltip((no?'قطعة '+esc(no):esc(pc.label||'قطعة'))+planTip(pc),{sticky:true,direction:'top'});poly.addTo(grp)});
+  ROADS.forEach(rd=>{const c=rd.geometry?.coordinates;if(!Array.isArray(c)||c.length<2)return;const w=roadWidthOf(rd),nm=String(rd.properties?.[ROAD_FIELDS.name]??'').trim();
+    L.polyline(c.map(p=>[p[1],p[0]]),{renderer:GIS_RENDER,color:'#ff8a3d',weight:3,opacity:0.95,dashArray:w?null:'6 5'})
+      .bindTooltip((nm?esc(nm)+' · ':'')+(w?`عرض الشارع ${nE(w,2)} م`:'عرض الشارع غير محدد'),{sticky:true}).addTo(grp)});
+  GIS_LAYERS=grp.addTo(map);if(fit&&grp.getLayers().length)map.fitBounds(grp.getBounds(),{padding:[30,30],maxZoom:19})}
 
 /* boot */
 // the regulatory ratio of the previous version's export section moves once into «الاشتراطات التنظيمية» (typed by the user)
 {const legacy=bldLegacyRatio();if(legacy!==null&&!String(S.tx.ratio??'').trim()){S.tx.ratio=String(legacy);S.tx.zSrc.ratio='manual'}if(String(S.bld.maxRatio??'').trim()){S.bld.maxRatio='';persist()}}
-fillScaleSelect();syncInputs();renderVerts();updateModeHint();applyProjType();gisRefreshNos();txHints();
+parkNorm();if(S.verts.length>=3)userApply();urSync();fillScaleSelect();syncInputs();renderVerts();updateModeHint();applyProjType();gisRefreshNos();txHints();
 try{const im=localStorage.getItem(STORE_IMG);if(im)loadImage(im,false)}catch(e){}
 try{const tp=localStorage.getItem(STORE_TXP);if(tp)loadTxPhoto(tp,false)}catch(e){}
 for(const k in TXSLOT){try{const d=localStorage.getItem(TXSLOT[k].store);if(d)loadTxSlot(k,d,false)}catch(e){}}
 render();setView(HAD||IN_CLAUDE?'sheet':'map');
 // street results of «مزيد» for the zoning panel: after the parcel layer is restored (it loads them itself), or for a drawn parcel
-window.mainParcelLayerReady=restoreMainParcelLayer();window.mainParcelLayerReady.then(()=>{if(!CUR_PC)zrLoadStreet()}).catch(()=>{});
+window.mainParcelLayerReady=restoreRoadLayer().then(restoreMainParcelLayer).then(()=>{restorePlanResults()});window.mainParcelLayerReady.then(()=>{if(!CUR_PC)zrLoadStreet()}).catch(()=>{});
 if(document.fonts){Promise.all(['400','600','700'].map(w=>document.fonts.load(`${w} 16px "IBM Plex Sans Arabic"`,'مسجد'))).then(()=>schedule()).catch(()=>{})}
 </script>
 

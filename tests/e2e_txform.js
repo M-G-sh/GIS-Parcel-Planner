@@ -91,7 +91,8 @@ function common(f,no,msg){assert.equal(f.no,no);assert.ok(f.modal,'form open');a
     await page.goto(base+'index.html');await page.waitForFunction(()=>typeof compute==='function'&&window.polygonClipping);
     await page.evaluate(()=>new Promise(r=>{localStorage.clear();sessionStorage.clear();const q=indexedDB.deleteDatabase('gis-parcel-planner-final');q.onsuccess=q.onerror=q.onblocked=()=>r()}));
     await page.goto(base+'index.html');await page.waitForFunction(()=>typeof compute==='function'&&window.polygonClipping);
-    await page.evaluate(()=>{S.projType='land';S.img.show=false;persist()});
+    // this test covers the planner with the user rules off (data as it is, nothing assumed); they are tested in e2e_user_rules.js
+    await page.evaluate(()=>{S.projType='land';S.img.show=false;S.urules.on=false;S.tx.style='full';S.txDef.on=false;urSync();persist()});
     await page.setInputFiles('#parcelFile',path.join(FX,'tx-cases.geojson'));await page.waitForFunction(()=>PARCELS.length===5&&PARCELS.every(p=>p.no)&&CUR_PC);
     const ids={};for(const no of ['T-ONE','T-CORNER','T-FOUR','T-MULTI','T-EMPTY'])ids[no]=await page.evaluate(n=>PARCELS.find(p=>p.no===n).stableId,no);
 
@@ -117,12 +118,12 @@ function common(f,no,msg){assert.equal(f.no,no);assert.ok(f.modal,'form open');a
     assert.deepEqual(e1.map(e=>e.sb),[4,1.5,2,null]);assert.deepEqual(e1.map(e=>e.face),['front','side','rear','side']);
     assert.deepEqual(f.cards,{front:'4',rear:'2',side:'1.5، غير محدد'});
     assert.equal(f.sbLine,'أمامي 4 م: ض1 · جانبي 1.5 م: ض2 · خلفي 2 م: ض3 · جانبي غير محدد: ض4');assert.equal(f.streetLine,'شارع الواحة (ض1)');
-    const one=f.diag.streets;assert.equal(one.length,2,'one street label per map');one.forEach(s=>{assert.equal(s.no,1);assert.equal(s.text,'شارع الواحة');labelOnFrontage(s,'T-ONE '+s.map)});
+    const one=f.diag.streets;assert.equal(one.length,2,'one street label per map');one.forEach(s=>{assert.equal(s.no,1);assert.equal(s.name,'شارع الواحة');assert.equal(s.text,'شارع الواحة (عرض 20 م)','width after the name');labelOnFrontage(s,'T-ONE '+s.map)});
     checkArrows(f,{1:4,2:1.5,3:2},'T-ONE');assert.deepEqual(f.diag.missing.filter(x=>x.map==='plan').map(x=>x.no),[4]);
     near(f.area,(30-1.5-0)*(40-4-2),0.05,'T-ONE buildable area (hand)');near(f.area,st.area.buildable,0.05,'T-ONE buildable = Street Tools');near(f.plot,1200,0.05,'plot area');
     assert.ok(f.zoneParts===1&&f.method==='clip','buildable outline drawn');
     checkLabels(f,'T-ONE');assert.ok(f.partial&&/مبدئية/.test(f.info),'provisional area stated');
-    for(const s of ['شارع الواحة','4 م','1.5 م','2 م','ارتداد غير محدد','المساحة القابلة للبناء (مبدئية)'])assert.ok(f.texts.includes(s),`T-ONE sheet text «${s}»`);
+    for(const s of ['شارع الواحة (عرض 20 م)','4 م','1.5 م','2 م','ارتداد غير محدد','المساحة القابلة للبناء (مبدئية)'])assert.ok(f.texts.includes(s),`T-ONE sheet text «${s}»`);
     assert.ok(f.texts.some(t=>/^(29.99|30|30.01) م$/.test(t))&&f.texts.some(t=>/^(39.99|40|40.01) م$/.test(t)),'edge lengths printed');
     assert.ok(f.texts.some(t=>/^96[89][.d]* م/.test(t)),'buildable area printed');assert.ok(f.warn.some(w=>/الارتداد غير محدد للضلع 4/.test(w)),'missing setback warned');
     assert.ok(/أسماء الشوارع والارتدادات من «مزيد»/.test(f.info),'source stated');
@@ -155,14 +156,14 @@ function common(f,no,msg){assert.equal(f.no,no);assert.ok(f.modal,'form open');a
     st=await inStreetTools(page,4,{manual:{3:2,4:2}});
     await plannerSelect(page,'T-CORNER');f=await page.evaluate(TXFORM);common(f,'T-CORNER','T-CORNER');
     assert.deepEqual(f.edges.map(e=>e.name),['شارع النور','شارع الضياء','','']);assert.deepEqual(f.edges.map(e=>e.street),[true,true,false,false]);
-    assert.deepEqual(f.edges.map(e=>e.sb),[5,3,2,2]);assert.deepEqual(f.cards,{front:'5، 3',rear:'غير محدد',side:'2'});
+    assert.deepEqual(f.edges.map(e=>e.sb),[5,3,2,2]);assert.deepEqual(f.cards,{front:'5، 3',rear:'2',side:'2'});
     assert.equal(f.streetLine,'شارع النور (ض1)، شارع الضياء (ض2)');
     for(const map of ['top','plan']){const L=f.diag.streets.filter(x=>x.map===map);assert.equal(L.length,2,`${map}: two street names`);
-      const a=L.find(x=>x.no===1),b=L.find(x=>x.no===2);assert.equal(a.text,'شارع النور');assert.equal(b.text,'شارع الضياء');
+      const a=L.find(x=>x.no===1),b=L.find(x=>x.no===2);assert.equal(a.name,'شارع النور');assert.equal(b.name,'شارع الضياء');
       labelOnFrontage(a,`corner ${map} south`);labelOnFrontage(b,`corner ${map} east`);
       assert.ok(!inBand(a.p,b)&&!inBand(b.p,a),`${map}: neither name sits in the other street's band`)}
     checkArrows(f,{1:5,2:3,3:2,4:2},'T-CORNER');checkLabels(f,'T-CORNER');assert.ok(!f.partial&&!f.none);assert.ok(f.texts.includes('المساحة القابلة للبناء'));near(f.area,(30-3-2)*(40-5-2),0.05,'T-CORNER area (hand)');near(f.area,st.area.buildable,0.05,'T-CORNER = Street Tools');
-    assert.ok(!f.texts.includes('شارع الواحة'),'nothing from T-ONE');assert.equal(f.warn.filter(w=>/غير محدد/.test(w)).length,0,'nothing missing');
+    assert.ok(!f.texts.some(t=>t.includes('شارع الواحة')),'nothing from T-ONE');assert.equal(f.warn.filter(w=>/غير محدد/.test(w)).length,0,'nothing missing');
     await dump(page,'2-T-CORNER');log(`T-CORNER: «شارع النور» on ض1 and «شارع الضياء» on ض2, each in its own band; setbacks 5 / 3 / 2 / 2; area ${f.area.toFixed(2)} m²`);
     await closeForm(page);
 
@@ -174,7 +175,7 @@ function common(f,no,msg){assert.equal(f.no,no);assert.ok(f.modal,'form open');a
     const fourNames=['شارع الفرقان','شارع الهدى','شارع الإيمان','شارع السلام'];assert.deepEqual(f.edges.map(e=>e.name),fourNames);
     const fourSb=st.rows.sort((a,b)=>a.no-b.no).map(r=>+r.sb);assert.deepEqual(f.edges.map(e=>e.sb),fourSb);assert.deepEqual(fourSb,[6,4,3,3]);
     for(const map of ['top','plan']){const L=f.diag.streets.filter(x=>x.map===map);assert.equal(L.length,4,`${map}: four names`);
-      L.forEach(x=>{assert.equal(x.text,fourNames[x.no-1]);labelOnFrontage(x,`four ${map} ض${x.no}`);L.filter(y=>y!==x).forEach(y=>assert.ok(!inBand(x.p,y),`${map}: ض${x.no} name not in ض${y.no}'s band`))})}
+      L.forEach(x=>{assert.equal(x.name,fourNames[x.no-1]);labelOnFrontage(x,`four ${map} ض${x.no}`);L.filter(y=>y!==x).forEach(y=>assert.ok(!inBand(x.p,y),`${map}: ض${x.no} name not in ض${y.no}'s band`))})}
     checkArrows(f,{1:6,2:4,3:3,4:3},'T-FOUR');checkLabels(f,'T-FOUR');near(f.area,(40-4-3)*(30-6-3),0.05,'T-FOUR area (hand)');near(f.area,st.area.buildable,0.05,'T-FOUR = Street Tools');
     assert.deepEqual(f.cards,{front:'6، 4، 3',rear:'غير محدد',side:'غير محدد'});
     await dump(page,'3-T-FOUR');log(`T-FOUR: four names on their own frontages (${fourNames.join(' / ')}); setbacks ${fourSb.join(' / ')}; area ${f.area.toFixed(2)} m²`);
@@ -193,14 +194,14 @@ function common(f,no,msg){assert.equal(f.no,no);assert.ok(f.modal,'form open');a
     assert.deepEqual(f.diag.streets.filter(x=>x.map==='plan').map(x=>x.no).sort((a,b)=>a-b),[1,5]);f.diag.streets.forEach(x=>labelOnFrontage(x,`multi ${x.map} ض${x.no}`));
     near(f.plot,40*40-10*10+20*20,0.05,'T-MULTI plot area (parts − hole)');near(f.area,(36*34-12*12)+(16*14),0.05,'T-MULTI buildable (hand: parts − hole grown by its setback)');
     near(f.area,st.area.buildable,0.05,'T-MULTI = Street Tools');assert.ok(f.zoneParts===2&&f.method==='clip','two buildable outlines drawn');
-    assert.equal(f.sbLine,'أمامي 4 م: ض1، 5 · جانبي 2 م: ض2–4، 6–8 · حول الفراغ 1 م: ض9–12');
+    assert.equal(f.sbLine,'أمامي 4 م: ض1، 5 · جانبي 2 م: ض2، 4، 6، 8 · خلفي 2 م: ض3، 7 · حول الفراغ 1 م: ض9–12');   // ض7: the other part's edge facing away from its street
     await dump(page,'4-T-MULTI');log(`T-MULTI: 12 edges (2 parts + hole), streets ض1 and ض5, hole setback 1 m drawn on ض9–12; area ${f.area.toFixed(2)} m² = hand = Street Tools`);
     await closeForm(page);
 
     // ---------- 5 · no data at all ----------
     console.log('T-EMPTY — never opened in «مزيد»');
     await plannerSelect(page,'T-EMPTY');f=await page.evaluate(TXFORM);common(f,'T-EMPTY','T-EMPTY');
-    assert.equal(f.diag.streets.length,0);assert.ok(!fourNames.concat(['شارع الواحة','شارع النور','شارع الضياء','شارع المجمع']).some(n=>f.texts.includes(n)),'no street name of another parcel');
+    assert.equal(f.diag.streets.length,0);assert.ok(!fourNames.concat(['شارع الواحة','شارع النور','شارع الضياء','شارع المجمع']).some(n=>f.texts.some(t=>t.includes(n))),'no street name of another parcel');
     assert.ok(f.infoWarn.some(w=>/لم يُحدَّد أي ضلع على شارع/.test(w)),'warning shown in the preview');assert.ok(/لا توجد نتائج محفوظة في «مزيد» لهذه القطعة/.test(f.info));
     await dump(page,'5-T-EMPTY');log('T-EMPTY: no street, «غير محدد», warnings; nothing from the other parcels');
     await closeForm(page);
@@ -210,8 +211,8 @@ function common(f,no,msg){assert.equal(f.no,no);assert.ok(f.modal,'form open');a
     await page.selectOption('#parcelSel',ids['T-CORNER']);await page.selectOption('#parcelSel',ids['T-ONE']);
     await page.waitForFunction(i=>CUR_PC&&CUR_PC.stableId===i&&!document.getElementById('bldModal').hidden&&BLD_OUT&&BLD_OUT.parcel===i,ids['T-ONE'],{timeout:20000});await page.waitForTimeout(800);
     f=await page.evaluate(TXFORM);assert.equal(f.parcel,ids['T-ONE']);assert.equal(f.no,'T-ONE');assert.deepEqual(f.edges.map(e=>e.name),['شارع الواحة','','','']);
-    assert.ok(!f.texts.includes('شارع النور')&&!f.texts.includes('شارع الضياء'),'nothing from T-CORNER');near(f.area,969,0.05,'T-ONE area after a quick switch');
-    const plannerOne=await page.evaluate(()=>S.verts.map(v=>({sb:v.sb,name:v.name})));assert.deepEqual(plannerOne.map(v=>v.name),['','','',''],'planner table of T-ONE untouched');
+    assert.ok(!f.texts.some(t=>t.includes('شارع النور')||t.includes('شارع الضياء')),'nothing from T-CORNER');near(f.area,969,0.05,'T-ONE area after a quick switch');
+    const plannerOne=await page.evaluate(()=>S.verts.map(v=>({sb:v.sb,name:v.name})));assert.deepEqual(plannerOne.map(v=>v.name),['شارع الواحة','','',''],'planner table of T-ONE: only its own street, from the street layer');
     await closeForm(page);await plannerSelect(page,'T-CORNER');f=await page.evaluate(TXFORM);assert.deepEqual(f.edges.map(e=>e.name),['شارع النور','شارع الضياء','','']);await closeForm(page);
     log('quick T-CORNER → T-ONE change ends on T-ONE with only its own data; back to T-CORNER shows its own streets');
 
@@ -220,7 +221,7 @@ function common(f,no,msg){assert.equal(f.no,no);assert.ok(f.modal,'form open');a
     await plannerSelect(page,'T-FOUR');await closeForm(page);await inStreetTools(page,4,{unapprove:[4]});
     await plannerSelect(page,'T-FOUR');f=await page.evaluate(TXFORM);
     assert.equal(f.edges[3].name,'');assert.ok(!f.edges[3].street,'not approved → not drawn as a street');assert.equal(f.edges[3].sb,null,'its rule setback (from the unapproved street width) is not used');
-    assert.ok(f.warn.some(w=>/ض4 «شارع السلام»/.test(w)),'unapproved suggestion warned');assert.ok(!f.texts.includes('شارع السلام'));
+    assert.ok(f.warn.some(w=>/ض4 «شارع السلام»/.test(w)),'unapproved suggestion warned');assert.ok(!f.texts.some(t=>t.includes('شارع السلام')));
     await dump(page,'6-T-FOUR-unapproved');log('ض4 no longer approved → not drawn, setback «غير محدد», suggestion warned');await closeForm(page);
 
     // ---------- 8 · «تطبيق على المخطط الرئيسي» still works and agrees ----------

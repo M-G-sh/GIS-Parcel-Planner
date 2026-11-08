@@ -56,6 +56,7 @@ async function dump(page,name){const dir=process.env.ZR_DUMP;if(!dir)return;fs.m
 // strings drawn on the exported sheet (the canvas the PNG and PDF of the sheet are made from)
 const SHEET=async()=>{const r=await renderExportCanvas();return{texts:window.__texts.get(r.cvx)||[],w:r.cvx.width,h:r.cvx.height,dropped:LAY.dropped}};
 // the mosque program, its layout and the sheet's areas table — compared with the previous version
+const DEMO=()=>{const sb=[20,12,20.5,10],roles=['front','side','rear','side'];S.projType='mosque';S.coordMode='local';S.zone=38;S.refLat=24.7135;S.refLon=46.8520;S.geom=null;S.mosque=null;S.house=null;S.layout=null;S.verts=rectVerts(350,200,35).map((p,i)=>({x:p.x,y:p.y,sb:sb[i],role:roles[i],name:i===0?'الطريق الدائري':''}));if(typeof applyProjType==='function')applyProjType();S.img.show=false;persist()};
 const MOSQUE=()=>{const m=compute(),r=v=>+(+v).toFixed(6);return{tot:m.tot,men:m.men,women:m.women,W:r(m.W),D:r(m.D),Dm:r(m.Dm),Dw:r(m.Dw),Ds:r(m.Ds),req:m.req,prov:m.prov,roofed:r(m.roofed),cover:r(m.cover),
   plot:r(m.plotArea),bArea:r(m.bArea),q:r(m.q),mosque:S.mosque,house:S.house,layoutOk:m.layoutOk,houseOk:m.houseOk,parts:m.g.parts.map(p=>[p.k,r(p.area||0),p.cap||0]),
   stalls:m.stalls.map(q=>q.map(p=>[+p.x.toFixed(4),+p.y.toFixed(4)])),table:tableRows(m),warn:m.warn}};
@@ -70,17 +71,19 @@ const MOSQUE=()=>{const m=compute(),r=v=>+(+v).toFixed(6);return{tot:m.tot,men:m
     const page=await ctx.newPage();page.on('pageerror',e=>errors.push(String(e)));page.on('dialog',d=>d.accept());
     const fresh=async(p,b)=>{await p.goto(b+'index.html');await p.waitForFunction(()=>typeof compute==='function'&&window.polygonClipping);
       await p.evaluate(()=>new Promise(r=>{localStorage.clear();sessionStorage.clear();const q=indexedDB.deleteDatabase('gis-parcel-planner-final');q.onsuccess=q.onerror=q.onblocked=()=>r()}));
-      await p.goto(b+'index.html');await p.waitForFunction(()=>typeof compute==='function'&&window.polygonClipping)};
+      await p.goto(b+'index.html');await p.waitForFunction(()=>typeof compute==='function'&&window.polygonClipping);
+      // the user rules (65 % / 75 %, ÷5 front) are off here: this test covers requirements read from the data only (e2e_user_rules.js covers them)
+      await p.evaluate(()=>{S.tx.style='full';S.txDef.on=false;if(S.urules){S.urules.on=false;if(typeof urSync==='function')urSync();persist()}})};
 
     // ---------- 1 · mosque model: unchanged, and its requirements are not assumed ----------
     console.log('Mosque model (default project)');
-    await fresh(page,base);await page.evaluate(()=>{S.img.show=false;persist()});
+    await fresh(page,base);await page.evaluate(DEMO);
     const scenario=async p=>{const a=await p.evaluate(MOSQUE);const b=await p.evaluate(()=>{S.cap=3000;S.womenPct=20;S.mosque=null;S.house=null;return null});const b2=await p.evaluate(MOSQUE);
       await p.evaluate(()=>{const d=defaults();S.cap=d.cap;S.womenPct=d.womenPct;S.mosque=null;S.house=null});return[a,b2]};
     const now=await scenario(page);
     const bdir=baselineDir();
     if(bdir&&fs.existsSync(path.join(bdir,'index.html'))){bsrv=await serve(bdir);const bctx=await browser.newContext({viewport:{width:1440,height:1000}}),bp=await bctx.newPage();
-      await fresh(bp,`http://127.0.0.1:${bsrv.address().port}/`);await bp.evaluate(()=>{S.img.show=false;persist()});const old=await scenario(bp);
+      await fresh(bp,`http://127.0.0.1:${bsrv.address().port}/`);await bp.evaluate(DEMO);const old=await scenario(bp);
       assert.deepEqual(now[0],old[0],'default mosque: program, layout, stalls and areas table identical to the previous version');
       assert.deepEqual(now[1],old[1],'mosque with 3000 worshippers / 20 % women: identical to the previous version');
       log(`identical to the previous version (${path.basename(bdir)}): ${now[0].tot} worshippers, ${now[0].req} stalls required / ${now[0].prov} provided, roofed ${now[0].roofed} m², table of ${now[0].table.length} rows; also with 3000 worshippers`);
