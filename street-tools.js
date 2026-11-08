@@ -72,13 +72,41 @@ function prepareParcel(parcel){const attrs=parcel.props||parcel.properties||{},e
   parcel.parcelSignature=parcel.parcelSignature||parcelGeometrySignature(parcel);
   parcel.stableId=parcel.stableId||`parcel:${encodeURIComponent(String(sourceId||'geometry'))}:${layerFingerprint('feature',[parcel])}`;
   parcel.searchText=[parcel.id,...entries.flatMap(([key,value])=>[key,value])].join(' ').toLocaleLowerCase();return parcel}
+// parcel number found by name (PARCEL_NUM, PARCEL_NO, PLOT_NO, رقم القطعة … — parcel-fields.js); '' when the layer has none
+function pfParcelNo(props){return window.ParcelFields?ParcelFields.value(props||{},'parcelNo'):''}
+/* «إعدادات الحقول وجداول الربط» saved by the main planner (field-mapping.js, IndexedDB): the same columns and lookup tables
+   for this layer, so «مزيد» shows the same plan, district, municipality … with their source */
+const FM_SHOW=['parcelNo','planNo','planName','planCode','districtName','municipalityName','centerName','governorateName','landUse','floors','height','status'];
+async function loadFieldMapping(){state.fm=null;if(!window.FieldMapping||!state.parcels.length)return;
+  const keys=[...new Set(state.parcels.flatMap(p=>Object.keys(p.props||p.properties||{})))];
+  try{const r=await FieldMapping.loadAll(window.ParcelStore,state.parcelLayerId,keys);
+    state.fm=FieldMapping.compile({mapping:r.cfg?.mapping||{},bindings:r.cfg?.bindings||[]},keys,r.tables||[]);state.fmFrom=r.from}catch(error){console.warn('Field mapping was not loaded:',error);return}
+  // parcel numbers and search text follow the mapping (plan number, plan name and district from a lookup can be searched too)
+  state.parcels.forEach(p=>{const R=FieldMapping.resolveRow(p.props||p.properties||{},state.fm),no=R.parcelNo.value;if(no)p.id=no;
+    const extra=['planNo','planName','districtName','municipalityName'].map(id=>R[id].value).filter(Boolean).join(' ');if(extra&&!p.searchText.includes(extra.toLocaleLowerCase()))p.searchText+=' '+extra.toLocaleLowerCase()});
+  updateParcelChoices();renderParcelAttributes()}
 function renderParcelAttributes(){const box=$('parcelAttributes'),parcel=currentParcel();if(!box)return;box.textContent='';if(!parcel){box.hidden=true;return}
   const attrs=parcel.props||parcel.properties||{},entries=Object.entries(attrs),find=names=>{const wanted=new Set(names.map(x=>x.toLowerCase()));return entries.find(([key,value])=>wanted.has(key.toLowerCase())&&value!==null&&String(value).trim()!=='')?.[1]};
-  const fields=[['رقم القطعة',['PARCEL_NO','PLOT_NO','parcel_id','FID']],['رقم المخطط',['PLAN_NO','PLAN_NUMBER','PLANID']],['الحي',['DISTRICT','NEIGHBORHOOD']],['البلدية',['MUNICIPALITY','MUNICIPALITY_NAME']],['الاستخدام',['LAND_USE','USE','USAGE']]];
-  for(const [label,keys] of fields){const value=find(keys);if(value===undefined)continue;const item=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');term.textContent=label;description.textContent=String(value);item.append(term,description);box.append(item)}
+  if(state.fm){const R=FieldMapping.resolveRow(attrs,state.fm),used=new Set(),SRC={gis:'GIS',domain:'جدول الربط'};
+    for(const id of FM_SHOW){const o=R[id],it=FieldMapping.ITEM[id];if(o.field)used.add(o.field.toLowerCase());if(!o.value&&!o.undef)continue;
+      const item=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');term.textContent=it.label;
+      if(o.value){description.textContent=o.value;const tag=document.createElement('span');tag.className='fm-src '+o.src;tag.textContent=SRC[o.src]||'';
+        tag.title=o.src==='domain'?`الكود ${o.code} ← ${o.table}`:o.field||'';description.append(' ',tag);if(o.note)description.title=o.note}
+      else{description.textContent='غير محدد';description.className='fm-undef';description.title=o.warn||'';const w=document.createElement('small');w.textContent=o.warn||'';description.append(w)}
+      item.dataset.fm=id;item.append(term,description);box.append(item)}
+    {const area=parcelArea(parcel,()=>[]),parts=parcelParts(parcel).length,holes=parcelParts(parcel).reduce((n,p)=>n+(p.holes||[]).length,0),item=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');
+      term.textContent='المساحة (محسوبة من الحدود)';description.textContent=area?`${fmt(area.original,2)} م²${parts>1?` · ${parts} أجزاء`:''}${holes?` · ${holes} فراغ داخلي`:''}`:'—';item.append(term,description);box.append(item)}
+    const other=entries.filter(([key])=>!used.has(key.toLowerCase()));
+    if(other.length){const item=document.createElement('div');item.className='all-fields';item.textContent=other.map(([key,value])=>`${key}: ${String(value??'')}`).join(' · ');box.append(item)}
+    box.hidden=false;return}
+  // each row: the field found by name (parcel-fields.js: DIS_ArabicName, MUN_Arabic, SubdivisionNumber, LANDUSE_DE, FLOORSNO …), else the older names
+  const PFS=window.ParcelFields,used=new Set();
+  const fields=[['رقم القطعة','parcelNo',['PARCEL_NO','PLOT_NO','parcel_id','FID']],['رقم المخطط','planNo',['PLAN_NO','PLAN_NUMBER','PLANID']],['اسم المخطط','planName',[]],
+    ['الحي','district',['DISTRICT','NEIGHBORHOOD']],['البلدية','municipality',['MUNICIPALITY','MUNICIPALITY_NAME']],['الاستخدام','parcelUse',['LAND_USE','USE','USAGE']],['عدد الأدوار','floors',[]]];
+  for(const [label,id,keys] of fields){const f=PFS?PFS.field(attrs,id):null,value=f?f.value:find(keys);if(f)used.add(f.key.toLowerCase());if(value===undefined)continue;const item=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');term.textContent=label;description.textContent=String(value);item.append(term,description);box.append(item)}
   {const area=parcelArea(parcel,()=>[]),parts=parcelParts(parcel).length,holes=parcelParts(parcel).reduce((n,p)=>n+(p.holes||[]).length,0),item=document.createElement('div'),term=document.createElement('dt'),description=document.createElement('dd');
     term.textContent='المساحة (محسوبة من الحدود)';description.textContent=area?`${fmt(area.original,2)} م²${parts>1?` · ${parts} أجزاء`:''}${holes?` · ${holes} فراغ داخلي`:''}`:'—';item.append(term,description);box.append(item)}
-  const shown=new Set(fields.flatMap(x=>x[1]).map(x=>x.toLowerCase())),other=entries.filter(([key])=>!shown.has(key.toLowerCase()));
+  const shown=new Set([...fields.flatMap(x=>x[2]).map(x=>x.toLowerCase()),...used]),other=entries.filter(([key])=>!shown.has(key.toLowerCase()));
   if(other.length){const item=document.createElement('div');item.className='all-fields';item.textContent=other.map(([key,value])=>`${key}: ${String(value??'')}`).join(' · ');box.append(item)}
   box.hidden=false}
 function selectParcel(index){const next=typeof index==='number'?index:state.parcels.findIndex(p=>p.stableId===String(index));if(!Number.isInteger(next)||next<0||next>=state.parcels.length)return;
@@ -152,7 +180,7 @@ function parseGeoJSON(json,kind){const crs=guessCRS(json.crs?.properties?.name||
   const first=fc.find(f=>f.geometry)?.geometry;let firstPt=null;
   function findFirst(g){if(!g)return null;let c=g.coordinates;while(Array.isArray(c)&&Array.isArray(c[0]))c=c[0];return Array.isArray(c)&&c.length>=2?c:null}
   firstPt=findFirst(first);const epsg=crs||guessCRS('',firstPt);if(epsg===null)throw Error('ملف GeoJSON بإحداثيات مترية بدون CRS. احفظه من GIS بنظام EPSG:4326 ثم ارفعه.');
-  if(kind==='parcel')return fc.map((f,i)=>{const parts=polygonParts(f.geometry,epsg),main=parts.slice().sort((a,b)=>Math.abs(signedArea(b.outer))-Math.abs(signedArea(a.outer)))[0];return main?{id:String(f.properties?.PLOT_NO??f.properties?.PARCEL_NO??f.properties?.رقم_القطعة??f.properties?.FID??f.id??i+1),sourceId:String(f.id??f.properties?.OBJECTID??f.properties?.PARCEL_ID??f.properties?.PARCEL_NO??f.properties?.PLOT_NO??f.properties?.FID??''),props:f.properties||{},polygon:main.outer,parts,geometry:f.geometry}:null}).filter(Boolean);
+  if(kind==='parcel')return fc.map((f,i)=>{const parts=polygonParts(f.geometry,epsg),main=parts.slice().sort((a,b)=>Math.abs(signedArea(b.outer))-Math.abs(signedArea(a.outer)))[0];return main?{id:String(pfParcelNo(f.properties)||(f.properties?.PLOT_NO??f.properties?.PARCEL_NO??f.properties?.رقم_القطعة??f.properties?.FID??f.id??i+1)),sourceId:String(f.id??f.properties?.OBJECTID??f.properties?.PARCEL_ID??f.properties?.PARCEL_NO??f.properties?.PLOT_NO??f.properties?.FID??''),props:f.properties||{},polygon:main.outer,parts,geometry:f.geometry}:null}).filter(Boolean);
   return fc.flatMap((f,i)=>normalizeLines(f.geometry,epsg).map((g,k)=>({type:'Feature',geometry:g,properties:{...f.properties,__source:i,__part:k}})))}
 function parseShp(buffer){const view=new DataView(buffer),out=[];let off=100;while(off+12<=buffer.byteLength){const nbytes=view.getInt32(off+4,false)*2,rs=off+8;
   if(nbytes<=0||rs+nbytes>buffer.byteLength)break;const shape=view.getInt32(rs,true);
@@ -179,7 +207,7 @@ async function parseZip(file,kind){if(!window.JSZip)throw Error('مكتبة فك
   if(/PROJCS|PROJCRS/i.test(prjTxt)&&epsg===4326)throw Error('الإسقاط المعروض في PRJ غير مدعوم. أعد التصدير إلى EPSG:4326.');
   if(kind==='parcel')return shapes.map((s,i)=>{if(!s)return null;if(![5,15,25].includes(s.shape))return null;
     const rings=s.parts.map(part=>cleanRing(part.map(p=>convertCoords(p,epsg)))).filter(p=>p.length>=3),parts=groupShapefileRings(rings),main=parts.slice().sort((a,b)=>Math.abs(signedArea(b.outer))-Math.abs(signedArea(a.outer)))[0];
-    return main?{id:String(attrs[i]?.PLOT_NO??attrs[i]?.PARCEL_NO??attrs[i]?.FID??i+1),sourceId:String(attrs[i]?.OBJECTID??attrs[i]?.PARCEL_ID??attrs[i]?.PARCEL_NO??attrs[i]?.PLOT_NO??attrs[i]?.FID??''),props:attrs[i]||{},polygon:main.outer,parts,geometry:{type:'ShapefilePolygon',rings}}:null}).filter(Boolean);
+    return main?{id:String(pfParcelNo(attrs[i])||(attrs[i]?.PLOT_NO??attrs[i]?.PARCEL_NO??attrs[i]?.FID??i+1)),sourceId:String(attrs[i]?.OBJECTID??attrs[i]?.PARCEL_ID??attrs[i]?.PARCEL_NO??attrs[i]?.PLOT_NO??attrs[i]?.FID??''),props:attrs[i]||{},polygon:main.outer,parts,geometry:{type:'ShapefilePolygon',rings}}:null}).filter(Boolean);
   return shapes.flatMap((s,i)=>s&&[3,13,23].includes(s.shape)?s.parts.filter(c=>c.length>=2).map((c,k)=>({type:'Feature',properties:{...(attrs[i]||{}),__source:i,__part:k},geometry:{type:'LineString',coordinates:c.map(p=>convertCoords(p,epsg))}})):[]);
 }
 async function importLayer(file,kind){const name=file.name.toLowerCase();return name.endsWith('.zip')?parseZip(file,kind):parseGeoJSON(JSON.parse(await file.text()),kind)}
@@ -193,7 +221,7 @@ async function restoreStoredLayers(){if(!window.ParcelStore)return;
         if(sent&&(G.isMultiParts(sent.parts)||!G.isMultiParts(parcelParts(layer[selected])))){const p=layer[selected];p.polygon=sent.polygon;p.parts=sent.parts;p.fromPlanner=sent.fromPlanner;p.mainPart=sent.mainPart;p.edgeData=sent.edgeData||[];p.signature=sent.signature||'';p.parcelSignature=sent.parcelSignature||p.parcelSignature}
         state.parcels=layer;state.parcelLayerId=requestedLayer;buildParcelIndex();
         if(selected<0){const active=await ParcelStore.getRecord('active-parcel');if(active?.layerId===requestedLayer)selected=state.parcels.findIndex(p=>p.stableId===active.parcelId||p.parcelSignature===active.parcelSignature)}
-        updateParcelChoices();selectParcel(selected>=0?selected:0);note('parcelStatus',`تم استرجاع ${fmt(state.parcels.length,0)} قطعة من التخزين المحلي.`,true)}}}catch(error){note('parcelStatus',`تعذر استرجاع طبقة القطع: ${error.message}`,false,true)}}
+        updateParcelChoices();selectParcel(selected>=0?selected:0);loadFieldMapping();note('parcelStatus',`تم استرجاع ${fmt(state.parcels.length,0)} قطعة من التخزين المحلي.`,true)}}}catch(error){note('parcelStatus',`تعذر استرجاع طبقة القطع: ${error.message}`,false,true)}}
   const requestedRoads=payload?.roadLayerId||localStorage.getItem(KEY_ROAD_LAYER);
   if(requestedRoads){try{const record=await ParcelStore.getLayer('roads',requestedRoads);if(Array.isArray(record?.data)){state.roads=record.data;state.roadLayerId=requestedRoads;rebuildRoadIndex();updateFieldSelectors();note('roadStatus',`تم استرجاع ${fmt(state.roads.length,0)} محور شارع من التخزين المحلي.`,true);
       if(currentParcel()&&!storeEntry())analyze({auto:true});else refresh()}}
@@ -212,7 +240,7 @@ function updateParcelChoices(){const select=$('parcelSelect'),search=$('parcelSe
   if(current)select.value=current.stableId;const multiple=state.parcels.length>1;$('parcel-select-wrap').hidden=!multiple;$('parcel-search-control').hidden=!multiple}
 async function handleFile(file,kind){if(!file)return;try{const list=await importLayer(file,kind);if(!list.length)throw Error(kind==='roads'?'الملف لا يحتوي خطوط شوارع صالحة. ارفع Polyline.':'الملف لا يحتوي قطعًا مضلعية.');
     if(state.isDemo){if(kind==='parcel')state.roads=[];else state.parcels=[];state.isDemo=false;}
-    if(kind==='parcel'){state.parcels=list.map(p=>prepareParcel({...p,parcelSignature:parcelSignature(p.polygon)}));state.selected=0;state.signature='';state.parcelSignature='';state.edgeData=[];state.matches=[];if($('parcelSearch'))$('parcelSearch').value='';buildParcelIndex();state.parcelLayerId=await persistLayer('parcels',state.parcels,file);updateParcelChoices();note('parcelStatus',`تم تحميل ${fmt(list.length,0)} قطعة من ${file.name}${state.parcelLayerId?' وحُفظت الطبقة كاملة.':'؛ التخزين الدائم غير متاح.'}`,true);selectParcel(0)}
+    if(kind==='parcel'){state.parcels=list.map(p=>prepareParcel({...p,parcelSignature:parcelSignature(p.polygon)}));state.selected=0;state.signature='';state.parcelSignature='';state.edgeData=[];state.matches=[];if($('parcelSearch'))$('parcelSearch').value='';buildParcelIndex();state.parcelLayerId=await persistLayer('parcels',state.parcels,file);updateParcelChoices();loadFieldMapping();note('parcelStatus',`تم تحميل ${fmt(list.length,0)} قطعة من ${file.name}${state.parcelLayerId?' وحُفظت الطبقة كاملة.':'؛ التخزين الدائم غير متاح.'}`,true);selectParcel(0)}
     else{state.roads=list;state.roadLayerId=await persistLayer('roads',state.roads,file);rebuildRoadIndex();updateFieldSelectors();note('roadStatus',`تم تحميل ${fmt(list.length,0)} خط شارع من ${file.name}${state.roadLayerId?' وحُفظت الطبقة كاملة.':'؛ التخزين الدائم غير متاح.'}`,true);
       if(currentParcel())analyze({auto:true});else refresh()}
     toast(kind==='parcel'?'تمت قراءة طبقة القطع. اختر قطعة من القائمة أو من الخريطة.':currentParcel()?'تمت قراءة طبقة الشوارع وتحديث ربط أضلاع القطعة المختارة.':'تمت قراءة طبقة الشوارع.');
