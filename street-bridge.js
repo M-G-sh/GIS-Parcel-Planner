@@ -18,7 +18,7 @@
       if(typeof S!=='undefined'&&Array.isArray(S.verts)&&S.verts.length>=3&&typeof buildGeo==='function'){
         const geo=buildGeo(),poly=geo.L.map(p=>{const q=geo.F.toLL(p);return[q.lon,q.lat]});
         const attrs=(typeof CUR_PC!=='undefined'&&CUR_PC?.attrs)||{};
-        payload={polygon:poly,attrs,parcelNo:String(S.tx?.parcelNo||attrs.PARCEL_NO||attrs.PLOT_NO||attrs.FID||'القطعة المختارة'),
+        payload={polygon:poly,attrs,parcelNo:String(S.tx?.parcelNo||S.gis?.no||(typeof ParcelFields!=='undefined'&&ParcelFields.value(attrs,'parcelNo'))||attrs.PARCEL_NO||attrs.PLOT_NO||attrs.FID||'القطعة المختارة'),
           signature:sig(),parcelSignature:CUR_PC?.parcelSignature||parcelSig(),parcelId:CUR_PC?.stableId||'',layerId:lsGet('gis_planner_parcel_layer_id_v1'),
           roadLayerId:lsGet('gis_planner_road_layer_id_v1'),edgeData:S.verts.map((v,i)=>({key:edgeKey(i),role:v.role||'side',sb:v.sb??0,name:v.name||'',
             streetW:v.streetW??null,streetWSrc:v.streetWSrc||'',streetMeasure:v.streetMeasure||null,sbSrc:v.sbSrc||''}))};

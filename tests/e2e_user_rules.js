@@ -144,6 +144,17 @@ const FORM=`(()=>{const o=BLD_OUT,T=o.tx,Z=o.zoning&&o.zoning.Z;return{parcel:o.
         CASE_DESCR:'وجود مباني أو أسوار منه',PRPPOSED_S:'الاحالة للادارة المختصة',BUILD_RATI:60});const o={no:S.tx.parcelNo,use:S.tx.parcelUse,fl:S.tx.floors,st:S.tx.status,notes:S.tx.notes};
         txFromParcel({PARCEL_NUM:'59/15',HAS_BUILDI:'لا',CASE_DESCR:'<Null>'});const o2={st:S.tx.status,notes:S.tx.notes};S.tx=JSON.parse(keep);return[o,o2]});
       assert.deepEqual(gf,[{no:'59/14',use:'سكني تجاري',fl:'2',st:'مبنية',notes:'وجود مباني أو أسوار منه — الاحالة للادارة المختصة'},{st:'غير مبنية',notes:''}],'parcel layer fields → form');
+      // the same layer joined to the plans and districts, as GeoJSON and as a shapefile (names cut to 10 characters):
+      // plan number / name, district and municipality found by name; codes and the registration date REG_DATE are not read
+      const jf=await page.evaluate(()=>{const keep=JSON.stringify(S.tx),keepG=JSON.stringify(S.gis),base={PARCEL_NUM:'59/14',PARCEL_KEY:'K-1',SUBDIVISIO:'77',LANDUSE_DE:'سكني',
+          LANDUSE_CO:'1101',FLOORSNO:'2',DIST_CODE:'014',REG_DATE:'2019-05-12',DIS_ID:44,MUN_ID:7},pick=()=>({planNo:S.tx.planNo,planName:S.tx.planName,
+          district:S.tx.district,municipality:S.tx.municipality,use:S.tx.parcelUse,floors:S.tx.floors,refDate:S.tx.zRefDate,gis:gisFields(CUR_ROW)});let CUR_ROW;
+        const run=r=>{CUR_ROW=r;txFromParcel(r);return pick()};
+        const a=run({...base,Subdivision_ID:9921,SubdivisionAName:'مخطط الروضة',SubdivisionNumber:'3120/أ',DIS_ArabicName:'حي الروضة',MUN_ArabicName:'بلدية العليا'});
+        const b=run({...base,DIS_Arabic:'حي الروضة',MUN_Arabic:'بلدية العليا'});S.tx=JSON.parse(keep);S.gis=JSON.parse(keepG);return[a,b]});
+      const G0={no:'59/14',noKey:'PARCEL_NUM',street:'',planName:'مخطط الروضة',planNo:'3120/أ',district:'حي الروضة',muni:'بلدية العليا',use:'سكني'};
+      assert.deepEqual(jf,[{planNo:'3120/أ',planName:'مخطط الروضة',district:'حي الروضة',municipality:'بلدية العليا',use:'سكني',floors:'2',refDate:'',gis:G0},
+        {planNo:'',planName:'',district:'حي الروضة',municipality:'بلدية العليا',use:'سكني',floors:'2',refDate:'',gis:{...G0,planName:'',planNo:''}}],'joined layer fields found by name');
       const at=await page.evaluate(()=>[txPhotoAt('2026-09-21_07-02-37_21.41345_39.85804.jpg'),txPhotoAt('IMG_1234.jpg'),txAtText('2026-09-21 19:05:00')]);
       assert.deepEqual(at,['2026-09-21 07:02:37','','2026/09/21'],'date and time read from the photo name');
       await page.evaluate(()=>{S.tx.photoAt='2026-09-21 07:02:37'});await page.evaluate(()=>txOpen(true));await page.waitForTimeout(800);

@@ -41,7 +41,8 @@ const settle=page=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>re
     let page=await open(off,base+'index.html');await page.waitForFunction(()=>typeof compute==='function'&&window.polygonClipping);
     const res=await page.evaluate(()=>({L:typeof window.L,pc:performance.getEntriesByType('resource').map(e=>e.name).filter(n=>/polygon-clipping/.test(n)),v:typeof polygonClipping.difference}));
     assert.equal(res.L,'undefined','CDN libraries are really blocked');assert.equal(res.pc.length,1);assert.match(res.pc[0],/\/vendor\/polygon-clipping\/polygon-clipping\.umd\.min\.js$/);
-    await page.evaluate(()=>{S.cap=300;S.housingArea=60;S.projType='mosque';persist()});
+    // the page opens as «أرض فقط»: choose «مسجد» in «نوع اللوحة» as a user does, which also shows the mosque sections (07 …)
+    await page.selectOption('#projType','mosque');await page.evaluate(()=>{S.cap=300;S.housingArea=60;persist()});
     await page.setInputFiles('#parcelFile',path.join(FX,'layout-cases.geojson'));await page.waitForFunction(()=>PARCELS.length===3&&PARCELS.every(x=>x.no));
     await selectParcel(page,'Y-L');let st=await page.evaluate(STATE);const zl=await page.evaluate(()=>({exact:M.zonesExact,area:M.zones.reduce((s,z)=>s+z.area,0)}));
     assert.ok(zl.exact,'concave zone computed by clipping offline');assert.ok(st.ok&&st.blocks.length>0,'layout placed offline');
@@ -60,7 +61,8 @@ const settle=page=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>re
     const ctx=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});page=await open(ctx,base+'index.html');
     page.on('console',msg=>{if(/toast:/.test(msg.text()))toasts.push(msg.text())});
     await page.waitForFunction(()=>typeof compute==='function'&&window.polygonClipping);
-    await page.evaluate(()=>{const t=window.toast;window.toast=m=>{console.log('toast: '+m);return t(m)};S.cap=300;S.housingArea=60;S.projType='mosque';S.img.show=false;S.exp.coords='local';persist()});
+    await page.selectOption('#projType','mosque');assert.ok(await page.isVisible('#autoBtn'),'«توزيع تلقائي» shown for a mosque project');
+    await page.evaluate(()=>{const t=window.toast;window.toast=m=>{console.log('toast: '+m);return t(m)};S.cap=300;S.housingArea=60;S.img.show=false;S.exp.coords='local';persist()});
     await page.setInputFiles('#parcelFile',path.join(FX,'layout-cases.geojson'));await page.waitForFunction(()=>PARCELS.length===3&&PARCELS.every(x=>x.no));
     const saved={};
     for(const no of ['Y-RECT','Y-L','Y-MULTI']){await selectParcel(page,no);await page.click('#autoBtn');await settle(page);st=await page.evaluate(STATE);
@@ -76,7 +78,7 @@ const settle=page=>page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>re
     // ---------- 3 · rectangle identical to the previous version ----------
     const bdir=baselineDir();
     if(bdir&&fs.existsSync(path.join(bdir,'index.html'))){const bsrv=await serve(bdir),bctx=await browser.newContext({viewport:{width:1440,height:1000}}),bp=await open(bctx,`http://127.0.0.1:${bsrv.address().port}/index.html`);
-      await bp.waitForFunction(()=>typeof compute==='function'&&window.polygonClipping);await bp.evaluate(()=>{S.cap=300;S.housingArea=60;S.projType='mosque';S.img.show=false;persist()});
+      await bp.waitForFunction(()=>typeof compute==='function'&&window.polygonClipping);await bp.selectOption('#projType','mosque');await bp.evaluate(()=>{S.cap=300;S.housingArea=60;S.img.show=false;persist()});
       await bp.setInputFiles('#parcelFile',path.join(FX,'layout-cases.geojson'));await bp.waitForFunction(()=>PARCELS.length===3&&PARCELS.every(x=>x.no));await selectParcel(bp,'Y-RECT');await bp.click('#autoBtn');await settle(bp);
       const old=await bp.evaluate(()=>{const m=compute();return{mosque:S.mosque,house:S.house,prov:m.prov,stalls:m.stalls}});const nw=saved['Y-RECT'];
       assert.deepEqual(nw.mosque,old.mosque);assert.deepEqual(nw.house,old.house);assert.equal(nw.prov,old.prov);assert.deepEqual(JSON.parse(JSON.stringify(nw.stalls)),JSON.parse(JSON.stringify(old.stalls)));

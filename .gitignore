@@ -2,6 +2,11 @@
 *_backup*/
 GIS_Parcel_Planner_With_More/
 
+# The user's domain lookup workbook: reference data for development and tests, uploaded from the page, never published
+data/*.xlsx
+data/*.xls
+data/*.csv
+
 # Editor and operating-system files
 .vscode/
 .idea/
