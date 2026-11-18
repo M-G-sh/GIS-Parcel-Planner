@@ -75,7 +75,7 @@ const onSheet=(texts,s)=>texts.includes(s)||texts.includes(String(s).replace(/\d
     const d1=await page.evaluate(()=>{const s=id=>document.getElementById('fmSel_'+id),opt=(id,v)=>[...s(id).options].find(o=>o.value===v)?.textContent||'';
       return{rows:document.querySelectorAll('#fmBody .fm-row').length,auto:['districtCode','municipalityCode','planCode','planNo','planName','districtName','landUse'].map(id=>[id,s(id).value,s(id).options[0].textContent]),
         dis:opt('districtCode','DIS_ID'),cols:s('landUse').options.length,val:document.querySelector('#fmBody [data-val="districtName"]').textContent}});
-    assert.equal(d1.rows,21,'one row per item');assert.ok(d1.auto.every(([,v])=>v==='__auto'));
+    assert.equal(d1.rows,22,'one row per item');assert.ok(d1.auto.every(([,v])=>v==='__auto'));
     assert.match(d1.auto[0][2],/تلقائي — DIS_ID/);assert.match(d1.auto[2][2],/تلقائي — Subdivision_ID/);assert.match(d1.auto[3][2],/تلقائي — SubdivisionNumber/);assert.match(d1.auto[6][2],/تلقائي — LANDUSE_DE — سكني · تجاري · صناعي/);
     assert.match(d1.dis,/^DIS_ID — 35 · 999 · 72$/,'column with its first 3 distinct values');assert.equal(d1.cols,2+KEYS.length);
     await page.fill('.fm-row[data-row="landUse"] .fm-q','layer');

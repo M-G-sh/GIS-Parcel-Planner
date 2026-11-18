@@ -543,13 +543,13 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
           <div><label for="txPlanName">اسم المخطط <span class="zsrc" data-fsrc="planName"></span></label><input id="txPlanName" type="text" data-k="tx.planName" placeholder="اسم المخطط"></div>
           <div><label for="txPlanUse">استخدام المخطط <span class="zsrc" data-fsrc="planUse"></span></label><input id="txPlanUse" type="text" data-k="tx.planUse" placeholder="مثال: سكني"></div>
           <div><label for="txSubUse">الاستخدام الفرعي للقطعة <span class="zsrc" data-fsrc="subUse"></span></label><input id="txSubUse" type="text" data-k="tx.subUse" placeholder="مثال: عمارة سكنية"></div>
-          <div><label for="txParcelUse">استخدام القطعة <span class="zsrc" data-fsrc="parcelUse"></span></label><input id="txParcelUse" type="text" data-k="tx.parcelUse" placeholder="فارغ = نوع المبنى"></div>
+          <div><label for="txParcelUse">استخدام القطعة <span class="zsrc" data-fsrc="parcelUse"></span></label><input id="txParcelUse" type="text" data-k="tx.parcelUse" placeholder="فارغ = الاستخدام"></div>
           <div><label for="txConflict">وجود تعارض</label><input id="txConflict" type="text" data-k="tx.conflict" placeholder="مثال: لا يوجد"></div>
         </div>
         <div class="hint">الحقول الفارغة تُؤخذ من خصائص ملف GIS المستورد إن وُجدت، وإلا تظهر «—» في النموذج. اختيار الحقول وجداول ربط الأكواد من «إعدادات الحقول» (القسم 01).</div>
         <div id="fmTxWarn" role="status" hidden></div>
         <div class="row2">
-          <div><label for="txType">نوع المبنى المسموح</label><input id="txType" type="text" data-k="tx.bType"></div>
+          <div><label for="txType">الاستخدام</label><input id="txType" type="text" data-k="tx.bType" placeholder="فارغ = استخدام القطعة"></div>
         </div>
         <div class="row wide"><label for="txFloorDesc">توصيف الأدوار</label><input id="txFloorDesc" type="text" data-k="tx.floorDesc" placeholder="مثال: أرضي + 3 متكررة (بحسب المستند الرسمي)"></div>
         <div class="hint">تنبيه: نسبة البناء ومعامل البناء وعدد الأدوار والارتفاع والمواقف بيانات نظامية تُدخل من مصدرها الرسمي في «الاشتراطات التنظيمية»؛ لا يستنتجها البرنامج من شكل القطعة.</div>
@@ -559,9 +559,9 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
           <div><label for="txArchLbl">عنوان بند العمارة</label><input id="txArchLbl" type="text" data-k="tx.archLbl"></div>
           <div><label for="txArch">اشتراطات العمارة</label><input id="txArch" type="text" data-k="tx.arch"></div>
           <div><label for="txUrban">النطاق العمراني (داخل / خارج)</label><input id="txUrban" type="text" data-k="tx.urban"></div>
-          <div><label for="txStatus">حالة القطعة <span class="zsrc" data-fsrc="status"></span></label><input id="txStatus" type="text" data-k="tx.status"></div>
+          <div><label for="txStatus">حالة القطعة <span class="zsrc" data-fsrc="status"></span></label><select id="txStatus" data-k="tx.status" data-status-list><option value="">— القيمة الافتراضية —</option></select></div>
         </div>
-        <div class="row wide"><label for="txNotes">الملاحظات</label><input id="txNotes" type="text" data-k="tx.notes"></div>
+        <div class="row wide"><label for="txArchive">رابط الأرشيف الفني <span class="zsrc" data-fsrc="archiveUrl"></span></label><input id="txArchive" type="url" dir="ltr" data-k="tx.archiveUrl" placeholder="https://"></div>
         <div class="sub">القيم الافتراضية للنموذج (لكل القطع)</div>
         <label class="chk"><input type="checkbox" id="tdOn" data-k="txDef.on"> استخدام هذه القيم في أي قطعة خاناتها فارغة</label>
         <div class="hint">قيم يكتبها المستخدم لكل القطع، وليست اشتراطات رسمية موثقة. أي قيمة مكتوبة للقطعة نفسها في الخانات أعلاه أو قادمة من GIS تُقدَّم عليها.</div>
@@ -572,9 +572,9 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
           <div><label for="tdArchLbl">عنوان بند العمارة</label><input id="tdArchLbl" type="text" data-k="txDef.archLbl"></div>
           <div><label for="tdArch">اشتراطات العمارة (ما بين القوسين يظهر كرابط)</label><input id="tdArch" type="text" data-k="txDef.arch"></div>
           <div><label for="tdUrban">النطاق العمراني</label><input id="tdUrban" type="text" data-k="txDef.urban"></div>
-          <div><label for="tdStatus">حالة القطعة</label><input id="tdStatus" type="text" data-k="txDef.status"></div>
+          <div><label for="tdStatus">حالة القطعة</label><select id="tdStatus" data-k="txDef.status" data-status-list><option value="">— بدون —</option></select></div>
         </div>
-        <div class="row wide"><label for="tdNotes">الملاحظات</label><input id="tdNotes" type="text" data-k="txDef.notes"></div>
+        <div class="row wide"><label for="tdArchive">رابط الأرشيف الفني</label><input id="tdArchive" type="url" dir="ltr" data-k="txDef.archiveUrl" placeholder="https://"></div>
         <div class="sub">صورة اللوجو (أعلى يمين النموذج)</div>
         <div class="drop" id="txLogoDrop" tabindex="0" role="button">اسحب صورة اللوجو هنا أو اضغط لاختيارها (PNG بخلفية شفافة أفضل)</div>
         <input type="file" id="txLogoFile" accept="image/*" hidden>
@@ -589,7 +589,7 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
         <div class="drop" id="txDrop" tabindex="0" role="button">اسحب صورة الموقع هنا أو اضغط لاختيارها</div>
         <input type="file" id="txFile" accept="image/*" hidden>
         <div class="hint" id="txPhotoInfo">لا توجد صورة بعد.</div>
-        <div class="row wide"><label for="txPhotoAt">تاريخ التصوير (يُقرأ من اسم الصورة، ويظهر التاريخ فوق «الملاحظات»)</label><input id="txPhotoAt" type="text" dir="ltr" data-k="tx.photoAt" placeholder="2026-09-21 07:02:37"></div>
+        <div class="row wide"><label for="txPhotoAt">تاريخ التصوير (يُقرأ من اسم الصورة، ويظهر التاريخ فوق «رابط الأرشيف الفني»)</label><input id="txPhotoAt" type="text" dir="ltr" data-k="tx.photoAt" placeholder="2026-09-21 07:02:37"></div>
         <div class="hint">بدون صورة باركود منفصلة: الصورة تأخذ إطار التوثيق كله وتظهر كاملة بدون أي قص، بما فيها شريط الباركود إن كان جزءًا منها. مع صورة باركود منفصلة: تظهر الصورة أعلى الإطار والباركود أسفلها.</div>
         <div class="sub">صورة الباركود / QR الجاهزة (أسفل صورة الموقع)</div>
         <div class="drop" id="txBarDrop" tabindex="0" role="button">اسحب صورة كارت الباركود الجاهزة هنا أو اضغط لاختيارها</div>
@@ -637,7 +637,7 @@ table.zr-t{border-collapse:collapse;width:100%;font-size:12px;background:var(--p
 
   <main class="main">
     <div class="bar">
-      <div class="tabs" role="group" aria-label="العرض"><button id="tabMap" aria-pressed="false"><svg class="ic" viewBox="0 0 24 24"><path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2zM9 4v14M15 6v14"/></svg>الخريطة</button><button id="tabSheet" aria-pressed="true"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/></svg>اللوحة</button></div>
+      <div class="tabs" role="group" aria-label="العرض"><button id="tabMap" aria-pressed="true"><svg class="ic" viewBox="0 0 24 24"><path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2zM9 4v14M15 6v14"/></svg>الخريطة</button><button id="tabSheet" aria-pressed="false"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/></svg>اللوحة</button></div>
       <span class="hint sheetonly" id="modeHint">اسحب المسجد أو السكن لتحريكه، واسحب الفراغ لتحريك الرسم داخل اللوحة.</span>
       <div class="bar-end"><button class="ghost" type="button" id="moreStreetTools" title="الأدوات الهندسية الإضافية"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>مزيد</button><button class="ghost" id="qTx"><svg class="ic" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M12 5v14M12 10h8.5M3.5 13H12"/></svg>نموذج المعاملة</button><button class="pri" id="qPdf"><svg class="ic" viewBox="0 0 24 24"><path d="M12 15V4m0 0-4 4m4-4 4 4M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/></svg>تصدير PDF</button></div>
     </div>
@@ -717,7 +717,7 @@ function defaults(){
   return {outlineColor:'#006c73',edgeColors:[],projType:'land',coordMode:'local',zone:38,refLat:24.7135,refLon:46.8520,
     verts:[],sbDef:{front:6,side:3,rear:3},urules:{on:true,div:5,min:3,max:6,ground:65,upper:75},
     // form defaults for every parcel (user values, not official); a parcel's own value always comes first
-    txDef:{on:true,parkTxt:'1.5 موقف لكل وحدة سكنية',floorDesc:'دور أرضي + ثلاث أدوار متكررة + ملحق علوي',special:'لا يوجد',archLbl:'اشتراطات عمارة مكة',arch:'مصدر العمارة التقليدية (عمارة مكة التقليدية)',urban:'داخل النطاق العمراني',status:'مبنية',notes:'-'},
+    txDef:{on:true,parkTxt:'1.5 موقف لكل وحدة سكنية',floorDesc:'دور أرضي + ثلاث أدوار متكررة + ملحق علوي',special:'لا يوجد',archLbl:'اشتراطات عمارة مكة',arch:'مصدر العمارة التقليدية (عمارة مكة التقليدية)',urban:'داخل النطاق العمراني',status:'مبنى قائم',archiveUrl:''},
     qAuto:true,qManual:244,cap:6500,womenPct:15,aPer:1.2,hallRatio:1.6,sahnRatio:0.45,ablPer:0.05,minaret:true,minSide:'right',minSize:5,
     housing:true,housingArea:320,parkRatio:12,stallW:2.5,stallL:5.5,aisle:6,buf:6,parkLimit:false,parkEdge:-1,parkZone:'mosque',mosque:null,house:null,layout:null,geom:null,
     img:{src:'esri',maxZ:19,show:true,drag:false,opacity:0.9,widthM:600,rot:0,cx:0,cy:0},
@@ -730,7 +730,7 @@ function defaults(){
       special:'',archLbl:'اشتراطات العمارة',arch:'',
       adv:'',
       cap:'',qr:'',qrStrip:false,qibla:true,north:true,
-      street:'',streetW:'',streetEdge:'',orient:'street',rot:0,planName:'',district:'',municipality:'',planUse:'',subUse:'',parcelUse:'',conflict:'',urban:'',status:'',notes:'',
+      street:'',streetW:'',streetEdge:'',orient:'street',rot:0,planName:'',district:'',municipality:'',planUse:'',subUse:'',parcelUse:'',conflict:'',urban:'',status:'',archiveUrl:'',
       // zoning requirements (الاشتراطات التنظيمية) of the current parcel; zSrc = where each value came from: 'gis' | 'manual' | 'rule' | ''
       city:'',amana:'',zUse:'',zUseTxt:'',farNA:false,zExc:[],zRef:'',zRefDate:'',zStatus:'',zRule:'',
       // field mapping (field-mapping-ui.js): centre / governorate names; fSrc = source of every mapped value ('gis' | 'domain' |
@@ -745,6 +745,20 @@ let S=defaults(),HAD=false;
 try{const raw=localStorage.getItem(STORE);if(raw){S=merge(defaults(),JSON.parse(raw));HAD=true}}catch(e){}
 // the old opening example (mosque on a 350×200 demo parcel) is not kept: an empty project starts on the map
 if(S.tb.project==='مسجد جامع (مثال)')S.tb.project='';
+/* parcel status (حالة القطعة): one of a fixed list, chosen from a drop-down. Older saves and GIS values («مبنية»، «غير مبنية»،
+   «تحت الإنشاء» …) are read into the list; a value that matches none of it is kept as written and offered in the drop-down as is */
+const TX_STATUS=['أرض فضاء','أرض مسورة','مبنى قائم','مبنى قيد الإنشاء','مبنى مهدم'];
+function txStatusNorm(v){const s=String(v??'').trim();if(!s||TX_STATUS.includes(s))return s;
+  const t=s.replace(/[إأآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي');
+  if(/هدم|مهدوم/.test(t))return'مبنى مهدم';
+  if(/(قيد|تحت)\s*(ال)?(انشاء|بناء|تشييد)/.test(t))return'مبنى قيد الإنشاء';
+  if(/مسور/.test(t))return'أرض مسورة';
+  if(/^غير\s*مبني|فضاء|خاليه|فارغه/.test(t))return'أرض فضاء';
+  if(/^مبني|قائم/.test(t))return'مبنى قائم';
+  return s}
+function txStatusSync(){S.tx.status=txStatusNorm(S.tx.status);S.txDef.status=txStatusNorm(S.txDef.status);
+  document.querySelectorAll('select[data-status-list]').forEach(sel=>{const v=String(getP(S,sel.dataset.k)??''),extra=v&&!TX_STATUS.includes(v);
+    sel.replaceChildren(sel.options[0],...TX_STATUS.map(o=>new Option(o,o)),...(extra?[new Option(`${v} (خارج القائمة)`,v)]:[]))})}
 if(S.verts.length===4&&S.verts[0]?.name==='الطريق الدائري'&&!localStorage.getItem(PARCEL_LAYER_KEY)){S.verts=[];S.geom=null;S.mosque=null;S.house=null;S.layout=null;S.projType='land';HAD=false}
 let IMG=null,IMGDATA=null,M=null,PT=null,LAY=null,c=null,K=1,zoom=1;
 function persist(){try{localStorage.setItem(STORE,JSON.stringify(S))}catch(e){}try{if(typeof CUR_PC!=='undefined'&&CUR_PC?.stableId)queueMainParcelSnapshot()}catch(e){}}
@@ -1237,7 +1251,7 @@ $('#sbody').addEventListener('mouseleave',()=>{if(!$('#sbody').contains(document
 const roleSb=r=>r==='none'?0:(+S.sbDef[r]||0);
 $('#applyRoles').onclick=()=>{S.verts.forEach(v=>{v.sb=roleSb(v.role||'side');v.sbSrc='';v.manual=true});renderSB();persist();schedule()};
 $('#sbZero').onclick=()=>{S.verts.forEach(v=>{v.sb=0;v.sbSrc='planner';v.manual=true});renderSB();persist();schedule()};
-function syncInputs(){document.querySelectorAll('[data-k]').forEach(el=>{const v=getP(S,el.dataset.k);if(el.type==='checkbox')el.checked=!!v;else el.value=v??''});$('#capR').value=S.cap;
+function syncInputs(){txStatusSync();document.querySelectorAll('[data-k]').forEach(el=>{const v=getP(S,el.dataset.k);if(el.type==='checkbox')el.checked=!!v;else el.value=v??''});$('#capR').value=S.cap;
   if(S.sheet.scale!=='auto')$('#scale').value=String(S.sheet.scale);$('#txStripBox').hidden=!S.tx.qrStrip;if(typeof zrExcRender==='function')zrExcRender()}
 function structural(){S.mosque=null;S.house=null;S.layout=null;renderVerts();persist();schedule()}
 $('#side').addEventListener('input',e=>{const el=e.target;
@@ -2053,7 +2067,7 @@ function drawTx(m,geo,mini,T){
   const sb=T.cards;
   if(REF){const D='---',ur=S.urules&&S.urules.on?ZR.userCfg(S.urules):null,fr=ur&&T.streets.length?`1/${nE(ur.div,2)} عرض الشارع\nبحد أدنى ${nE(ur.min,2)} م`:null,mv=v=>/غير محدد/.test(v)?D:v;
     card(0,0,`${format(area,2)}م²`,'مساحة قطعة الأرض');
-    card(1,0,txVal(tx.bType)||D,'نوع المبنى المسموح');
+    card(1,0,txVal(tx.bType,tx.parcelUse)||D,'الاستخدام');
     card(2,0,calc.validFloors?format(calc.floors,0):D,'الحد الأقصى لعدد\nالأدوار (دور)');
     card(3,0,calc.height!==null&&calc.height>0&&!calc.heightAuto?format(calc.height,2):D,'الحد الأقصى\nللارتفاع(م)');
     card(4,0,calc.validRatio?`${format(calc.ratio,1)}%`:D,'نسبة بناء\nالدور الأرضي');
@@ -2071,7 +2085,7 @@ function drawTx(m,geo,mini,T){
     card(3,1,hasRear?mv(sb.rear):thru?'لا يوجد\n(شارع من الأمام والخلف)':D,'الارتداد الخلفي(م)');
     card(4,1,mv(sb.side),'الارتداد الجانبي (م)')}else{
   card(0,0,metric(area),'مساحة قطعة الأرض');
-  card(1,0,txVal(tx.bType)||'—','نوع المبنى المسموح');
+  card(1,0,txVal(tx.bType,tx.parcelUse)||'—','الاستخدام');
   // regulatory cards: a missing requirement reads «غير محدد»; an automatic height is labelled as the form's estimate, not a requirement
   card(2,0,calc.validFloors?format(calc.floors,0):'غير محدد','الحد الأقصى لعدد\nالأدوار (دور)');
   card(3,0,calc.height!==null&&calc.height>0?metric(calc.height,'م',2):'غير محدد',calc.heightAuto?'الارتفاع (تقدير\n4.30 + الأدوار)':'الحد الأقصى\nللارتفاع(م)');
@@ -2094,12 +2108,16 @@ function drawTx(m,geo,mini,T){
     ['الاشتراطات الخاصة',dv('special')||'—'],
     [dv('archLbl')||'اشتراطات العمارة',dv('arch')||'—'],
     ['النطاق العمراني (داخل / خارج)',dv('urban')||'—'],
-    ['حالة القطعة',dv('status')||'—'],
+    ['حالة القطعة',txStatusNorm(dv('status'))||'—'],
     String(tx.photoAt??'').trim()?['تاريخ التصوير',txAtText(tx.photoAt)]:null,
-    ['الملاحظات',dv('notes')||'-----']].filter(Boolean).filter(r=>!REF||r[0]!=='الارتدادات حسب الأضلاع'&&(r[0]!=='الاستخدامات غير المسموح بها'||tx.notUses));
+    ['رابط الأرشيف الفني',dv('archiveUrl')||'—','link']].filter(Boolean).filter(r=>!REF||r[0]!=='الارتدادات حسب الأضلاع'&&(r[0]!=='الاستخدامات غير المسموح بها'||tx.notUses));
   const rh=(TB.h-16)/rows.length;
-  rows.forEach(([lab,v],i)=>{const cy=TB.y+8+rh*(i+.5);if(i)line(TB.x+13,TB.y+8+rh*i,TB.x+TB.w-12,TB.y+8+rh*i,C.line,1);
+  // a link is drawn exactly as written: left to right, its digits never converted, broken anywhere when too long for the cell
+  const linkLines=(s,sz,max)=>{const out=[];let cur='';for(const ch of s){if(cur&&width(cur+ch,sz,500)>max){out.push(cur);cur=ch}else cur+=ch}if(cur)out.push(cur);return out};
+  rows.forEach(([lab,v,kind],i)=>{const cy=TB.y+8+rh*(i+.5);if(i)line(TB.x+13,TB.y+8+rh*i,TB.x+TB.w-12,TB.y+8+rh*i,C.line,1);
     text(lab,1290,cy,fit(lab,14,205),400,C.muted);
+    if(kind==='link'&&v!=='—'){let sz=13,ls=linkLines(v,sz,370);while(ls.length>2&&sz>8){sz-=.5;ls=linkLines(v,sz,370)}if(ls.length>2)ls=[ls[0],ls[1].slice(0,-1)+'…'];
+      ls.forEach((s,j)=>text(s,1075,cy+(j-(ls.length-1)/2)*(sz+2),sz,500,'#a8894f','right',0,'ltr'));return}
     let sz=13.5,ls=wrap(v,sz,370);while(ls.length>2&&sz>9.5){sz-=.5;ls=wrap(v,sz,370)}if(ls.length>2)ls=[ls[0],ls[1]+' …'];
     if(REF)ls=ls.map(AR);const pm=REF&&ls.length===1&&/^(.+?)\s*(\([^()]+\))$/.exec(ls[0]);
     if(pm){const z=fit(ls[0],sz,370,500),w1=width(pm[1]+' ',z,500),w2=width(pm[2],z,500),X2=1075-w1;text(pm[1],1075,cy,z,500,C.val);text(pm[2],X2,cy,z,500,'#a8894f');line(X2-w2,cy+z*.62,X2,cy+z*.62,'#a8894f',1);return}
@@ -2647,7 +2665,7 @@ function txFromParcel(row) {
     floorDesc:['توصيف الأدوار'], parkTxt:['اشتراطات مواقف السيارات','متطلبات المواقف','Parking'],
     uses:['الاستخدامات المسموح بها'], notUses:['الاستخدامات غير المسموح بها'],
     special:['الاشتراطات الخاصة','القيود الإضافية'], arch:['اشتراطات العمارة'],
-    urban:['النطاق العمراني'], status:['حالة القطعة','PARCEL_STATUS'], notes:['الملاحظات','ملاحظات'],
+    urban:['النطاق العمراني'], status:['حالة القطعة','PARCEL_STATUS'], archiveUrl:['رابط الأرشيف الفني','الأرشيف الفني','رابط الأرشيف','ARCHIVE_URL','ARCHIVE_LINK','ArchiveUrl','ARCH_LINK'],
     // zoning requirements (الاشتراطات التنظيمية): location, land use, official reference and its approval status
     city:['المدينة','City','CityName','City Arabic Name'], amana:['الأمانة','الامانة','Amana','Amanah','Amana Arabic Name'],
     zUseTxt:['تصنيف الاستخدام','تصنيف استخدام الأرض','استخدام الأرض','LAND_USE','LandUseClass','UseClass','LANDUSE_DE','LANDUSE_DESC'],
@@ -2672,11 +2690,11 @@ function txFromParcel(row) {
   S.tx.center = ''; S.tx.governorate = '';
   if (typeof fmResolve === 'function') { const R = fmResolve(row); if (R) fmTxApply(R, 'parcel'); else S.tx.fSrc = S.tx.fWarn = S.tx.fNote = null }
   for (const name of ['loc','adv','cap','qr','streetEdge']) S.tx[name] = '';
-  // parcel layer of the municipality (FLOORSNO, LANDUSE_DE, HAS_BUILDI, CASE_DESCR …): status from the «built» flags, notes from
-  // the case description and its proposed action; a field that is empty or <Null> leaves the form's own default
+  // parcel layer of the municipality (FLOORSNO, LANDUSE_DE, HAS_BUILDI …): without a status field the status comes from the
+  // «built» flags; a field that is empty or <Null> leaves the form's own default. The status is then read into its fixed list
   const fv = (...ns) => { for (const n of ns) { const v = fields.get(key(n)); if (v != null && String(v).trim() && !/^<null>$/i.test(String(v).trim())) return String(v).trim() } return '' };
-  if (!S.tx.status) { const b = fv('HAS_BUILDI','HAS_BUILDING','IS_BUILT'); S.tx.status = /^(نعم|1|yes|true|y)$/i.test(b) ? 'مبنية' : /^(لا|0|no|false|n)$/i.test(b) ? 'غير مبنية' : '' }
-  if (!S.tx.notes) S.tx.notes = [fv('CASE_DESCR','CASE_DESC'), fv('PRPOPSED_S','PRPPOSED_S','PROPOSED_S')].filter(Boolean).join(' — ');
+  if (!S.tx.status) { const b = fv('HAS_BUILDI','HAS_BUILDING','IS_BUILT'); S.tx.status = /^(نعم|1|yes|true|y)$/i.test(b) ? 'مبنى قائم' : /^(لا|0|no|false|n)$/i.test(b) ? 'أرض فضاء' : '' }
+  S.tx.status = txStatusNorm(S.tx.status);
   // land-use class: from a land-use field; the parcel-use field is used only when its text names a known use
   const useCls=ZR?ZR.classifyUse(S.tx.zUseTxt):'',alt=ZR&&!S.tx.zUseTxt?ZR.classifyUse(S.tx.parcelUse):'';
   S.tx.zUse=useCls||(alt&&alt!=='other'?alt:'');if(!S.tx.zUseTxt&&S.tx.zUse)S.tx.zUseTxt=S.tx.parcelUse;
@@ -3065,7 +3083,7 @@ parkNorm();if(S.verts.length>=3)userApply();urSync();fillScaleSelect();syncInput
 try{const im=localStorage.getItem(STORE_IMG);if(im)loadImage(im,false)}catch(e){}
 try{const tp=localStorage.getItem(STORE_TXP);if(tp)loadTxPhoto(tp,false)}catch(e){}
 for(const k in TXSLOT){try{const d=localStorage.getItem(TXSLOT[k].store);if(d)loadTxSlot(k,d,false)}catch(e){}}
-render();setView(HAD||IN_CLAUDE?'sheet':'map');
+render();setView(IN_CLAUDE?'sheet':'map');   // the app always opens on the map (inside claude.ai the map tiles cannot load)
 // street results of «مزيد» for the zoning panel: after the parcel layer is restored (it loads them itself), or for a drawn parcel
 window.mainParcelLayerReady=restoreRoadLayer().then(restoreMainParcelLayer).then(()=>{restorePlanResults()});window.mainParcelLayerReady.then(()=>{if(!CUR_PC)zrLoadStreet()}).catch(()=>{});
 if(document.fonts){Promise.all(['400','600','700'].map(w=>document.fonts.load(`${w} 16px "IBM Plex Sans Arabic"`,'مسجد'))).then(()=>schedule()).catch(()=>{})}

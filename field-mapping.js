@@ -58,7 +58,8 @@
     {id:'subUse',label:'الاستخدام الفرعي للقطعة',group:G_USE,kind:'name',tx:'subUse',names:['الاستخدام الفرعي للقطعة','الاستخدام الفرعي','SubUse','SUB_USE'],re:[]},
     {id:'floors',label:'عدد الأدوار',group:G_USE,kind:'number',tx:'floors',pf:'floors'},
     {id:'height',label:'الارتفاع المسموح م',group:G_USE,kind:'number',tx:'height',pf:'height'},
-    {id:'status',label:'حالة القطعة',group:G_USE,kind:'text',tx:'status',names:['حالة القطعة','PARCEL_STATUS','ParcelStatus','status'],re:[]}
+    {id:'status',label:'حالة القطعة',group:G_USE,kind:'text',tx:'status',names:['حالة القطعة','PARCEL_STATUS','ParcelStatus','status'],re:[]},
+    {id:'archiveUrl',label:'رابط الأرشيف الفني',group:G_PARCEL,kind:'text',tx:'archiveUrl',names:['رابط الأرشيف الفني','الأرشيف الفني','رابط الأرشيف','ARCHIVE_URL','ARCHIVE_LINK','ArchiveUrl','ARCH_LINK'],re:[]}
   ];
   const ITEM=Object.fromEntries(ITEMS.map(it=>[it.id,it]));
   ITEMS.forEach(it=>{if(it.names)it.n=[...new Set(it.names.map(key))]});
