@@ -141,9 +141,16 @@ const FORM=`(()=>{const o=BLD_OUT,T=o.tx,Z=o.zoning&&o.zoning.Z;return{parcel:o.
       await page.evaluate(()=>txOpen(true));await page.waitForTimeout(800);
       // municipality parcel layer fields read into the form (the parcel's own data is kept, nothing else is changed)
       const gf=await page.evaluate(()=>{const keep=JSON.stringify(S.tx);txFromParcel({PARCEL_NUM:'59/14',FLOORSNO:2,LANDUSE_DE:'سكني تجاري',LAYER_DESC:'سكني تجاري',HAS_BUILDI:'نعم',IS_BUILT:1,
-        CASE_DESCR:'وجود مباني أو أسوار منه',PRPPOSED_S:'الاحالة للادارة المختصة',BUILD_RATI:60});const o={no:S.tx.parcelNo,use:S.tx.parcelUse,fl:S.tx.floors,st:S.tx.status,notes:S.tx.notes};
-        txFromParcel({PARCEL_NUM:'59/15',HAS_BUILDI:'لا',CASE_DESCR:'<Null>'});const o2={st:S.tx.status,notes:S.tx.notes};S.tx=JSON.parse(keep);return[o,o2]});
-      assert.deepEqual(gf,[{no:'59/14',use:'سكني تجاري',fl:'2',st:'مبنية',notes:'وجود مباني أو أسوار منه — الاحالة للادارة المختصة'},{st:'غير مبنية',notes:''}],'parcel layer fields → form');
+        CASE_DESCR:'وجود مباني أو أسوار منه',ARCHIVE_URL:'https://archive.example/a/59-14',BUILD_RATI:60});const o={no:S.tx.parcelNo,use:S.tx.parcelUse,fl:S.tx.floors,st:S.tx.status,arc:S.tx.archiveUrl};
+        txFromParcel({PARCEL_NUM:'59/15',HAS_BUILDI:'لا',CASE_DESCR:'<Null>'});const o2={st:S.tx.status,arc:S.tx.archiveUrl};
+        const st=['حالة القطعة','مسورة','تحت الإنشاء','مهدوم','مبنية','قيد المراجعة'].map(v=>{txFromParcel({PARCEL_NUM:'1',['حالة القطعة']:v});return S.tx.status});
+        S.tx=JSON.parse(keep);return[o,o2,st.slice(1)]});
+      assert.deepEqual(gf,[{no:'59/14',use:'سكني تجاري',fl:'2',st:'مبنى قائم',arc:'https://archive.example/a/59-14'},{st:'أرض فضاء',arc:''},
+        ['أرض مسورة','مبنى قيد الإنشاء','مبنى مهدم','مبنى قائم','قيد المراجعة']],'parcel layer fields → form (status into its list, unknown kept)');
+      // the status drop-down offers the fixed list; an older saved «مبنية» is read as «مبنى قائم»
+      const sel=await page.evaluate(()=>{const keep=S.tx.status;S.tx.status='مبنية';syncInputs();const o=[...document.querySelectorAll('#txStatus option')].map(o=>o.value),v=$('#txStatus').value;
+        S.tx.status=keep;syncInputs();return{o,v}});
+      assert.deepEqual(sel,{o:['','أرض فضاء','أرض مسورة','مبنى قائم','مبنى قيد الإنشاء','مبنى مهدم'],v:'مبنى قائم'},'status drop-down');
       // the same layer joined to the plans and districts, as GeoJSON and as a shapefile (names cut to 10 characters):
       // plan number / name, district and municipality found by name; codes and the registration date REG_DATE are not read
       const jf=await page.evaluate(()=>{const keep=JSON.stringify(S.tx),keepG=JSON.stringify(S.gis),base={PARCEL_NUM:'59/14',PARCEL_KEY:'K-1',SUBDIVISIO:'77',LANDUSE_DE:'سكني',
@@ -160,7 +167,7 @@ const FORM=`(()=>{const o=BLD_OUT,T=o.tx,Z=o.zoning&&o.zoning.Z;return{parcel:o.
       await page.evaluate(()=>{S.tx.photoAt='2026-09-21 07:02:37'});await page.evaluate(()=>txOpen(true));await page.waitForTimeout(800);
       const r=await page.evaluate(()=>({H:BLD_OUT.H,texts:__texts.get(BLD_OUT.cv)||[],sb:BLD_OUT.diag.setbacks.map(x=>x.map+':'+x.sb),A:BLD_OUT.zoning.Z.A}));
       assert.equal(r.H,1000,'reference look: no strip below the card');assert.ok(!r.texts.includes('الحساب الهندسي والنظامي للمسطحات'),'no calculation strip');
-      for(const t of ['رقم القطعة: W٢٠-٢٠٠٠','١/٥ عرض الشارع','بحد أدنى ٣ م','٦٥%','الحد الأقصى','للارتفاع(م)','استخدام القطعة','وجود تعارض','اشتراطات مواقف السيارات','الملاحظات'])
+      for(const t of ['رقم القطعة: W٢٠-٢٠٠٠','١/٥ عرض الشارع','بحد أدنى ٣ م','٦٥%','الحد الأقصى','للارتفاع(م)','استخدام القطعة','وجود تعارض','اشتراطات مواقف السيارات','رابط الأرشيف الفني'])
         assert.ok(r.texts.includes(t),'reference text '+t+' | '+r.texts.slice(0,40).join(' | '));
       assert.ok(r.texts.includes('١٫٥ لكل وحدة سكنية'),'parking requirement on the form (Arabic decimal mark)');
       // gross floor area card left «--» in the reference look (the figure stays in the calculation panel / detailed look); FAR without an approved
@@ -168,9 +175,13 @@ const FORM=`(()=>{const o=BLD_OUT,T=o.tx,Z=o.zoning&&o.zoning.Z;return{parcel:o.
       assert.ok(r.texts.includes('الإجمالية (م٢)')&&r.texts.includes('--'),'gross floor area card kept with «--» (filled by hand)');
       const farTxt=await page.evaluate(()=>{const Z=BLD_OUT.zoning.Z;return(Math.round(Z.gross/Z.A*100)/100).toString().replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]).replace('.','٫')});
       assert.ok(r.texts.includes(farTxt),'calculated FAR '+farTxt+' drawn');
-      for(const d of ['دور أرضي + ثلاث أدوار متكررة + ملحق علوي','لا يوجد','اشتراطات عمارة مكة','داخل النطاق العمراني','مبنية'])assert.ok(r.texts.includes(d),'form default '+d);
+      for(const d of ['دور أرضي + ثلاث أدوار متكررة + ملحق علوي','لا يوجد','اشتراطات عمارة مكة','داخل النطاق العمراني','مبنى قائم'])assert.ok(r.texts.includes(d),'form default '+d);
       assert.ok(!r.texts.some(t=>t.includes('وأقصى')),'no maximum on the front card');
-      {const i=r.texts.indexOf('تاريخ التصوير'),j=r.texts.indexOf('الملاحظات');assert.ok(i>0&&i<j,'photo date row just above the notes');
+      {const i=r.texts.indexOf('تاريخ التصوير'),j=r.texts.indexOf('رابط الأرشيف الفني');assert.ok(i>0&&i<j,'photo date row just above the archive link');
+       assert.ok(!r.texts.includes('الملاحظات')&&r.texts.includes('الاستخدام')&&!r.texts.includes('نوع المبنى المسموح'),'archive link in place of the notes; card «الاستخدام»');
+       const t=await page.evaluate(async()=>{const keep=S.tx.archiveUrl;S.tx.archiveUrl='https://archive.example/plans/59-14?id=2026';txOpen(true);await new Promise(r=>setTimeout(r,800));
+         const o=__texts.get(BLD_OUT.cv)||[];S.tx.archiveUrl=keep;return o});
+       assert.ok(t.includes('https://archive.example/plans/59-14?id=2026'),'archive link drawn as written (Latin digits, left to right)');
        assert.ok(r.texts.includes('٢٠٢٦/٠٩/٢١')&&!r.texts.some(t=>t.includes('٠٧:٠٢')),'photo date drawn, no time')}
       assert.ok(r.texts.includes('مصدر العمارة التقليدية')&&r.texts.includes('(عمارة مكة التقليدية)'),'link part drawn separately');
       assert.ok(!r.texts.includes('الشوارع المحيطة')&&!r.texts.includes('الارتدادات حسب الأضلاع'),'rows not in the reference left out');
